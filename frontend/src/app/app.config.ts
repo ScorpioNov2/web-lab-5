@@ -12,6 +12,7 @@ import {
 	withPreloading,
 } from '@angular/router';
 import { provideFileRouter } from '@analogjs/router';
+import { provideImmediateInput } from './core/forms/composition-buffer';
 import { authInterceptor } from './core/http/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -25,6 +26,8 @@ export const appConfig: ApplicationConfig = {
 			withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
 		),
 		provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+		// text fields update on every keystroke, also while an IME (Vietnamese...) is composing
+		provideImmediateInput(),
 		// Hydration reuses the server-rendered DOM. Data hand-off has its own mechanism
 		// (DataCache + TransferState), so Angular's HTTP transfer cache stays off.
 		provideClientHydration(withEventReplay(), withNoHttpTransferCache()),

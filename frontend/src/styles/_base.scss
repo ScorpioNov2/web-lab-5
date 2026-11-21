@@ -26,3 +26,13 @@ body {
 	position: relative;
 	min-width: 330px;
 }
+
+/* A full-screen page (the 404 screen) brings its own design: the shell's chrome is removed from
+   the layout and the focus order while it is open (class set on <html> by that page). */
+html.standalone-page {
+	app-header,
+	app-theme-frame,
+	app-falling-effect {
+		display: none;
+	}
+}

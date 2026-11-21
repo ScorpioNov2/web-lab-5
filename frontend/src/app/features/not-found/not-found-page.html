@@ -1,0 +1,252 @@
+<div class="nebula"></div>
+<div class="stars-layer stars-sm"></div>
+<div class="stars-layer stars-md"></div>
+<div class="stars-layer stars-lg"></div>
+
+<section class="wrapper" aria-labelledby="not-found-title">
+	<div class="visual-stage">
+		@if (!imageFailed()) {
+			<img
+				#artwork
+				class="artwork"
+				src="/assets/app/404-image.png"
+				alt=""
+				(error)="imageFailed.set(true)"
+			/>
+		} @else {
+			<svg
+				class="artwork"
+				viewBox="0 0 240 240"
+				fill="none"
+				aria-hidden="true"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<defs>
+					<!-- Градиент планеты с глубокими тенями -->
+					<radialGradient id="nf-planet-grad" cx="32%" cy="28%" r="72%">
+						<stop offset="0%" stop-color="#e9d5ff" />
+						<stop offset="25%" stop-color="#9333ea" />
+						<stop offset="68%" stop-color="#3b0764" />
+						<stop offset="100%" stop-color="#090314" />
+					</radialGradient>
+
+					<!-- Направленный градиент для ободка (светлый сверху слева, прозрачный в тени) -->
+					<linearGradient id="nf-rim-stroke" x1="12%" y1="12%" x2="72%" y2="72%">
+						<stop offset="0%" stop-color="#ffffff" stop-opacity="0.7" />
+						<stop offset="40%" stop-color="#c084fc" stop-opacity="0.3" />
+						<stop offset="75%" stop-color="#3b0764" stop-opacity="0" />
+						<stop offset="100%" stop-color="#090314" stop-opacity="0" />
+					</linearGradient>
+
+					<!-- Легкое фоновое свечение за планетой -->
+					<radialGradient id="nf-bg-glow" cx="50%" cy="48%" r="50%">
+						<stop offset="0%" stop-color="#7c3aed" stop-opacity="0.24" />
+						<stop offset="60%" stop-color="#38bdf8" stop-opacity="0.06" />
+						<stop offset="100%" stop-color="#090514" stop-opacity="0" />
+					</radialGradient>
+
+					<!-- Градиент основного кольца -->
+					<linearGradient id="nf-ring-grad" x1="0%" y1="50%" x2="100%" y2="50%">
+						<stop offset="0%" stop-color="#38bdf8" stop-opacity="0.1" />
+						<stop offset="25%" stop-color="#38bdf8" stop-opacity="0.85" />
+						<stop offset="55%" stop-color="#c084fc" stop-opacity="0.95" />
+						<stop offset="85%" stop-color="#f472b6" stop-opacity="0.85" />
+						<stop offset="100%" stop-color="#f472b6" stop-opacity="0.1" />
+					</linearGradient>
+
+					<!-- Градиент луны -->
+					<radialGradient id="nf-moon-grad" cx="30%" cy="30%" r="70%">
+						<stop offset="0%" stop-color="#ffffff" />
+						<stop offset="50%" stop-color="#cbd5e1" />
+						<stop offset="100%" stop-color="#334155" />
+					</radialGradient>
+
+					<!-- Мягкие ореолы для спутников (без квадратных артефактов фильтра) -->
+					<radialGradient id="nf-moon-halo" cx="50%" cy="50%" r="50%">
+						<stop offset="35%" stop-color="#e2e8f0" stop-opacity="0.32" />
+						<stop offset="100%" stop-color="#e2e8f0" stop-opacity="0" />
+					</radialGradient>
+					<radialGradient id="nf-cyan-halo" cx="50%" cy="50%" r="50%">
+						<stop offset="25%" stop-color="#38bdf8" stop-opacity="0.55" />
+						<stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+					</radialGradient>
+					<radialGradient id="nf-pink-halo" cx="50%" cy="50%" r="50%">
+						<stop offset="25%" stop-color="#f472b6" stop-opacity="0.55" />
+						<stop offset="100%" stop-color="#f472b6" stop-opacity="0" />
+					</radialGradient>
+
+					<!-- Фильтр свечения с расширенной областью (только для широкого кольца) -->
+					<filter
+						id="nf-ring-glow"
+						filterUnits="userSpaceOnUse"
+						x="0"
+						y="0"
+						width="240"
+						height="240"
+					>
+						<feGaussianBlur stdDeviation="3.5" result="blur" />
+						<feMerge>
+							<feMergeNode in="blur" />
+							<feMergeNode in="SourceGraphic" />
+						</feMerge>
+					</filter>
+
+					<!-- Обтравочный контур планеты -->
+					<clipPath id="nf-planet-clip">
+						<circle cx="120" cy="115" r="56" />
+					</clipPath>
+				</defs>
+
+				<!-- 1. Чистое фоновое свечение -->
+				<circle cx="120" cy="115" r="105" fill="url(#nf-bg-glow)" />
+
+				<!-- 2. Звезды на фоне -->
+				<g opacity="0.85">
+					<circle cx="42" cy="54" r="1.5" fill="#e2e8f0" />
+					<circle cx="198" cy="42" r="1.2" fill="#38bdf8" />
+					<circle cx="206" cy="172" r="1.8" fill="#e2e8f0" />
+					<circle cx="38" cy="186" r="1.2" fill="#c084fc" />
+					<path
+						d="M 66 36 Q 66 42 72 42 Q 66 42 66 48 Q 66 42 60 42 Q 66 42 66 36 Z"
+						fill="#f8fafc"
+					/>
+					<path
+						d="M 188 188 Q 188 192 192 192 Q 188 192 188 196 Q 188 192 184 192 Q 188 192 188 188 Z"
+						fill="#38bdf8"
+					/>
+				</g>
+
+				<!-- 3. ЗАДНЯЯ часть кольца (наклон -16 градусов) -->
+				<g transform="rotate(-16 120 115)">
+					<path
+						d="M 16 115 A 104 28 0 0 1 224 115"
+						stroke="url(#nf-ring-grad)"
+						stroke-width="10"
+						stroke-linecap="round"
+						opacity="0.45"
+					/>
+					<path
+						d="M 28 115 A 92 22 0 0 1 212 115"
+						stroke="#e9d5ff"
+						stroke-width="1.5"
+						stroke-dasharray="6 4"
+						opacity="0.35"
+					/>
+				</g>
+
+				<!-- 4. Основная сфера планеты -->
+				<g>
+					<circle cx="120" cy="115" r="56" fill="url(#nf-planet-grad)" />
+
+					<!-- Детали поверхности и тень от кольца -->
+					<g clip-path="url(#nf-planet-clip)">
+						<g transform="rotate(-16 120 115)" opacity="0.18">
+							<rect x="45" y="82" width="150" height="7" rx="3.5" fill="#f3e8ff" />
+							<rect x="45" y="96" width="150" height="4" rx="2" fill="#38bdf8" />
+							<rect x="45" y="132" width="150" height="9" rx="4.5" fill="#1e1b4b" />
+							<rect x="45" y="146" width="150" height="5" rx="2.5" fill="#c084fc" />
+						</g>
+						<g transform="rotate(-16 120 115)">
+							<path
+								d="M 16 121 A 104 28 0 0 0 224 121"
+								stroke="#05020a"
+								stroke-width="8"
+								opacity="0.55"
+							/>
+						</g>
+					</g>
+
+					<!-- Тонкий световой блик только по верхнему левому краю -->
+					<circle
+						cx="120"
+						cy="115"
+						r="55.6"
+						stroke="url(#nf-rim-stroke)"
+						stroke-width="0.8"
+					/>
+				</g>
+
+				<!-- 5. ПЕРЕДНЯЯ часть кольца -->
+				<g transform="rotate(-16 120 115)" filter="url(#nf-ring-glow)">
+					<path
+						d="M 224 115 A 104 28 0 0 1 16 115"
+						stroke="url(#nf-ring-grad)"
+						stroke-width="10"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M 212 115 A 92 22 0 0 1 28 115"
+						stroke="#ffffff"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						opacity="0.65"
+					/>
+				</g>
+
+				<!-- 6. Спутники с гладким радиальным свечением -->
+				<!-- Крупная луна -->
+				<g>
+					<circle cx="186" cy="48" r="22" fill="url(#nf-moon-halo)" />
+					<circle cx="186" cy="48" r="9.5" fill="url(#nf-moon-grad)" />
+					<circle cx="183" cy="46" r="2" fill="#94a3b8" opacity="0.4" />
+					<circle cx="189" cy="51" r="1.5" fill="#64748b" opacity="0.4" />
+				</g>
+
+				<!-- Голубой спутник -->
+				<g>
+					<circle cx="52" cy="176" r="14" fill="url(#nf-cyan-halo)" />
+					<circle cx="52" cy="176" r="5" fill="#38bdf8" />
+					<circle cx="50.5" cy="174.5" r="1.5" fill="#ffffff" opacity="0.85" />
+				</g>
+
+				<!-- Малый розовый спутник -->
+				<g>
+					<circle cx="196" cy="154" r="10" fill="url(#nf-pink-halo)" />
+					<circle cx="196" cy="154" r="3.2" fill="#f472b6" />
+				</g>
+			</svg>
+		}
+	</div>
+
+	<div class="code-pill">ОШИБКА 404</div>
+	<h1 id="not-found-title" class="error-title">Страница не найдена</h1>
+	<p class="error-desc">
+		Похоже, эта страница затерялась в открытом космосе или ссылка больше не работает.
+	</p>
+
+	<div class="actions">
+		<a routerLink="/" class="nf-btn nf-btn-primary">
+			<svg
+				width="18"
+				height="18"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+				<polyline points="9 22 9 12 15 12 15 22" />
+			</svg>
+			На главную
+		</a>
+		<button type="button" class="nf-btn nf-btn-secondary" (click)="back()">
+			<svg
+				width="18"
+				height="18"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<path d="m15 18-6-6 6-6" />
+			</svg>
+			Вернуться назад
+		</button>
+	</div>
+</section>
