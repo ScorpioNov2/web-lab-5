@@ -1,0 +1,293 @@
+/*
+ * Full-screen "404" screen. The host is a fixed layer over the whole viewport (the app shell hides
+ * its own header / frame while this page is open), so everything below is the page's own design.
+ * Button classes carry the nf- prefix so the global .btn styles of the app cannot leak in.
+ */
+:host {
+	--nf-text-primary: #ffffff;
+	--nf-text-secondary: #94a3b8;
+	--nf-accent-glow: rgba(124, 58, 237, 0.4);
+
+	position: fixed;
+	inset: 0;
+	z-index: 900; /* above the page, below popups (1000) and notifications (2000) */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: clamp(20px, 5vw, 40px);
+	overflow-x: hidden;
+	overflow-y: auto;
+	background: radial-gradient(ellipse at 50% 0%, #13112b 0%, #070812 55%, #030408 100%);
+	color: var(--nf-text-primary);
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* aurora glow */
+.nebula {
+	position: fixed;
+	inset: 0;
+	background:
+		radial-gradient(circle at 20% 25%, rgba(99, 102, 241, 0.14) 0%, transparent 45%),
+		radial-gradient(circle at 80% 75%, rgba(236, 72, 153, 0.1) 0%, transparent 45%),
+		radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.12) 0%, transparent 50%);
+	pointer-events: none;
+	z-index: 0;
+}
+
+/* starry sky, three twinkling layers */
+.stars-layer {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+}
+
+.stars-sm {
+	background-image:
+		radial-gradient(1px 1px at 5% 12%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 14% 48%, #cbd5e1 50%, transparent 100%),
+		radial-gradient(1px 1px at 22% 82%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 31% 19%, #94a3b8 50%, transparent 100%),
+		radial-gradient(1px 1px at 39% 63%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 47% 9%, #e2e8f0 50%, transparent 100%),
+		radial-gradient(1px 1px at 54% 91%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 63% 34%, #cbd5e1 50%, transparent 100%),
+		radial-gradient(1px 1px at 71% 76%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 79% 15%, #94a3b8 50%, transparent 100%),
+		radial-gradient(1px 1px at 88% 52%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 95% 88%, #e2e8f0 50%, transparent 100%),
+		radial-gradient(1px 1px at 11% 89%, #fff 50%, transparent 100%),
+		radial-gradient(1px 1px at 68% 6%, #cbd5e1 50%, transparent 100%);
+	background-size: 450px 450px;
+	opacity: 0.65;
+}
+
+.stars-md {
+	background-image:
+		radial-gradient(1.5px 1.5px at 12% 24%, #ffffff 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 28% 71%, #c4b5fd 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 44% 38%, #ffffff 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 59% 84%, #bae6fd 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 74% 29%, #ffffff 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 89% 67%, #fbcfe8 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 18% 93%, #ffffff 50%, transparent 100%),
+		radial-gradient(1.5px 1.5px at 82% 11%, #c4b5fd 50%, transparent 100%);
+	background-size: 650px 650px;
+	animation: twinkle 4s ease-in-out infinite alternate;
+}
+
+.stars-lg {
+	background-image:
+		radial-gradient(
+			2px 2px at 19% 16%,
+			#ffffff 40%,
+			rgba(255, 255, 255, 0.2) 70%,
+			transparent 100%
+		),
+		radial-gradient(
+			2.5px 2.5px at 78% 22%,
+			#e0e7ff 40%,
+			rgba(199, 210, 254, 0.2) 70%,
+			transparent 100%
+		),
+		radial-gradient(
+			2px 2px at 34% 85%,
+			#ffffff 40%,
+			rgba(255, 255, 255, 0.2) 70%,
+			transparent 100%
+		),
+		radial-gradient(
+			2.5px 2.5px at 86% 79%,
+			#fce7f3 40%,
+			rgba(251, 207, 232, 0.2) 70%,
+			transparent 100%
+		),
+		radial-gradient(
+			2px 2px at 52% 14%,
+			#bae6fd 40%,
+			rgba(186, 230, 253, 0.2) 70%,
+			transparent 100%
+		);
+	background-size: 850px 850px;
+	animation: twinkle 6s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes twinkle {
+	0% {
+		opacity: 0.35;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+/* content */
+.wrapper {
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	max-width: 520px;
+	margin: auto;
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.visual-stage {
+	position: relative;
+	width: clamp(190px, 45vw, 240px);
+	height: clamp(190px, 45vw, 240px);
+	margin-bottom: clamp(20px, 4vw, 28px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&::before {
+		content: '';
+		position: absolute;
+		inset: 12%;
+		background: radial-gradient(circle, var(--nf-accent-glow) 0%, transparent 70%);
+		filter: blur(26px);
+		z-index: -1;
+		animation: breathe 4s ease-in-out infinite alternate;
+	}
+}
+
+@keyframes breathe {
+	0% {
+		transform: scale(0.9);
+		opacity: 0.65;
+	}
+	100% {
+		transform: scale(1.15);
+		opacity: 1;
+	}
+}
+
+.artwork {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	animation: float 6s ease-in-out infinite;
+	filter: drop-shadow(0 20px 35px rgba(124, 58, 237, 0.3));
+}
+
+@keyframes float {
+	0%,
+	100% {
+		transform: translateY(0px) rotate(0deg);
+	}
+	50% {
+		transform: translateY(-10px) rotate(1.5deg);
+	}
+}
+
+.code-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 14px;
+	border-radius: 99px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	backdrop-filter: blur(8px);
+	font-size: 13px;
+	font-weight: 600;
+	color: #c4b5fd;
+	letter-spacing: 0.08em;
+	margin-bottom: 16px;
+}
+
+.error-title {
+	font-size: clamp(28px, 6vw, 40px);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	line-height: 1.15;
+	background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	margin-bottom: 14px;
+}
+
+.error-desc {
+	font-size: clamp(15px, 3.2vw, 16.5px);
+	color: var(--nf-text-secondary);
+	line-height: 1.6;
+	max-width: 420px;
+	margin-bottom: clamp(28px, 5vw, 36px);
+}
+
+.actions {
+	display: flex;
+	gap: 12px;
+	width: 100%;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+.nf-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 48px;
+	padding: 0 24px;
+	border-radius: 12px;
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: none;
+}
+
+.nf-btn:focus-visible {
+	outline: 2px solid #c4b5fd;
+	outline-offset: 3px;
+}
+
+.nf-btn-primary {
+	background: #ffffff;
+	color: #05060b;
+	box-shadow: 0 8px 20px -4px rgba(255, 255, 255, 0.25);
+
+	&:hover {
+		background: #f1f5f9;
+		transform: translateY(-2px);
+		box-shadow: 0 12px 24px -4px rgba(255, 255, 255, 0.35);
+	}
+}
+
+.nf-btn-secondary {
+	background: rgba(255, 255, 255, 0.06);
+	color: #f8fafc;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	backdrop-filter: blur(8px);
+
+	&:hover {
+		background: rgba(255, 255, 255, 0.12);
+		transform: translateY(-2px);
+	}
+}
+
+@media (max-width: 480px) {
+	.actions {
+		flex-direction: column;
+	}
+
+	.nf-btn {
+		width: 100%;
+	}
+}
+
+/* people who asked their system for less motion get a still sky */
+@media (prefers-reduced-motion: reduce) {
+	.stars-md,
+	.stars-lg,
+	.artwork,
+	.visual-stage::before {
+		animation: none;
+	}
+}
