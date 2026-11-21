@@ -65,11 +65,9 @@ export function validateRegisterForm(form: RegisterRequest): ValidationResult {
 		errors.push('Пожалуйста, введите корректный адрес электронной почты!');
 	}
 
-	// Проверка Пароля
-	if (password.trim().length < 6) {
-		errors.push(
-			'Пароль должен содержать не менее 6 символов (без учета пробелов в начале/конце)!',
-		);
+	// Проверка Пароля (то же правило, что на backend: от 8 до 72 символов)
+	if (password.length < 8 || password.length > 72) {
+		errors.push('Пароль должен содержать от 8 до 72 символов!');
 	}
 
 	return toValidationResult(errors);

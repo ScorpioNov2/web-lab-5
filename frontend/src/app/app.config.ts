@@ -1,23 +1,32 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import {
-	ApplicationConfig,
-	inject,
-	provideAppInitializer,
-	provideBrowserGlobalErrorListeners,
-} from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { AuthService } from './core/auth/auth.service';
+	provideClientHydration,
+	withEventReplay,
+	withNoHttpTransferCache,
+} from '@angular/platform-browser';
+import {
+	PreloadAllModules,
+	withComponentInputBinding,
+	withInMemoryScrolling,
+	withPreloading,
+} from '@angular/router';
+import { provideFileRouter } from '@analogjs/router';
 import { authInterceptor } from './core/http/auth.interceptor';
-import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
 	providers: [
 		provideBrowserGlobalErrorListeners(),
-		provideRouter(routes),
+		// File-based routes from src/app/pages. Resolver results and path params reach the page
+		// components as inputs; lazy route chunks are preloaded in the background (prefetch).
+		provideFileRouter(
+			withComponentInputBinding(),
+			withPreloading(PreloadAllModules),
+			withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+		),
 		provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
-		// Restore the profile of an existing session (does not block the first render).
-		provideAppInitializer(() => {
-			inject(AuthService).restoreSession();
-		}),
+		// Hydration reuses the server-rendered DOM. Data hand-off has its own mechanism
+		// (DataCache + TransferState), so Angular's HTTP transfer cache stays off.
+		provideClientHydration(withEventReplay(), withNoHttpTransferCache()),
 	],
 };

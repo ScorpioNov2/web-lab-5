@@ -35,8 +35,8 @@ describe('auth validation', () => {
 			fullName: 'Иванов Иван',
 			username: 'Ivan_Ivanov',
 			email: 'ivan@mail.ru',
-			password: 'secret1',
-			passwordConfirm: 'secret1',
+			password: 'secret12',
+			passwordConfirm: 'secret12',
 		};
 
 		it('accepts valid data (the username is checked case-insensitively)', () => {
@@ -53,9 +53,13 @@ describe('auth validation', () => {
 			expect(validateRegisterForm({ ...valid, email: 'nope' }).errors).toEqual([
 				'Пожалуйста, введите корректный адрес электронной почты!',
 			]);
-			expect(validateRegisterForm({ ...valid, password: ' 123  ' }).errors[0]).toContain(
-				'не менее 6 символов',
-			);
+			// same rule as the backend: 8..72 characters
+			expect(validateRegisterForm({ ...valid, password: '1234567' }).errors).toEqual([
+				'Пароль должен содержать от 8 до 72 символов!',
+			]);
+			expect(validateRegisterForm({ ...valid, password: 'x'.repeat(73) }).errors).toEqual([
+				'Пароль должен содержать от 8 до 72 символов!',
+			]);
 		});
 	});
 });

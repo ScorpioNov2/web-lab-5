@@ -36,3 +36,41 @@
 	position: relative;
 	color: var(--theme-text-color, inherit);
 }
+
+/* thin indeterminate bar on top of the page while a navigation loads its data */
+.nav-progress {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	z-index: 2000;
+	overflow: hidden;
+	pointer-events: none;
+
+	&::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		width: 40%;
+		background-color: var(--color-primary);
+		animation: navProgress 1.1s ease-in-out infinite;
+	}
+}
+
+@keyframes navProgress {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(250%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.nav-progress::before {
+		width: 100%;
+		animation: none;
+		opacity: 0.6;
+	}
+}

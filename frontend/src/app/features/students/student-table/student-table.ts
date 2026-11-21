@@ -26,6 +26,8 @@ export class StudentTable {
 	readonly rowSelect = output<number>();
 	/** A row was double-clicked (open details) */
 	readonly rowOpen = output<number>();
+	/** The pointer or keyboard focus reached a row: a good moment to warm the cache */
+	readonly rowHover = output<number>();
 
 	protected readonly columns: Column[] = [
 		{ field: 'fullName', label: 'ФИО Студента' },

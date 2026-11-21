@@ -1,9 +1,33 @@
 <header class="main-header">
 	<div class="header-container">
-		<h1 class="header-title">Система Заявок Студентов</h1>
+		<h1 class="header-title"><a routerLink="/">Система Заявок Студентов</a></h1>
 
-		<div class="header-auth">
+		<div class="header-auth" [class.header-auth-user]="auth.isLoggedIn()">
 			@if (auth.isLoggedIn()) {
+				<a
+					class="btn btn-secondary btn-icon"
+					routerLink="/profile"
+					queryParamsHandling="preserve"
+					aria-label="Профиль"
+					[attr.title]="profileTitle()"
+				>
+					<!-- bust: head and shoulders -->
+					<svg
+						class="profile-icon"
+						viewBox="0 0 24 24"
+						width="20"
+						height="20"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.9"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<circle cx="12" cy="8" r="4" />
+						<path d="M4.5 20.5c0-3.9 3.4-6.5 7.5-6.5s7.5 2.6 7.5 6.5" />
+					</svg>
+				</a>
 				<button type="button" class="btn btn-secondary" (click)="logout()">Выход</button>
 			} @else {
 				<button type="button" class="btn btn-secondary" (click)="openAuth('login', $event)">

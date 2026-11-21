@@ -8,12 +8,24 @@
 			(input)="onSearch($event)"
 		/>
 	</div>
-	<div class="action-buttons">
-		<button type="button" class="btn btn-success" (click)="openAdd()">Добавление</button>
+	<div
+		class="action-buttons"
+		[attr.title]="
+			auth.canManageStudents() ? null : 'Изменять данные может только администратор'
+		"
+	>
+		<button
+			type="button"
+			class="btn btn-success"
+			[disabled]="!auth.canManageStudents()"
+			(click)="openAdd()"
+		>
+			Добавление
+		</button>
 		<button
 			type="button"
 			class="btn btn-primary"
-			[disabled]="focusedIsuId() === null"
+			[disabled]="!auth.canManageStudents() || focusedIsuId() === null"
 			(click)="editSelected()"
 		>
 			Редактирование
@@ -21,7 +33,7 @@
 		<button
 			type="button"
 			class="btn btn-danger"
-			[disabled]="focusedIsuId() === null"
+			[disabled]="!auth.canManageStudents() || focusedIsuId() === null"
 			(click)="deleteSelected()"
 		>
 			Удаление
@@ -35,28 +47,12 @@
 
 <section #tableContainer class="table-container" [class.is-loading]="loading.isLoading()">
 	<app-loading-overlay />
-	@if (students().length === 0) {
+	@if (error(); as failure) {
+		<app-error-state [status]="failure.status" [message]="failure.message" (retry)="reload()" />
+	} @else if (students().length === 0) {
 		<div class="empty-state">
 			<img src="assets/app/empty-box.png" alt="No data" class="empty-img" />
-			<p class="empty-text">
-				{{
-					result() === null
-						? 'Здесь пока ничего нет!'
-						: 'Список пуст или результаты не найдены.'
-				}}
-			</p>
-			@if (!auth.isLoggedIn()) {
-				<div class="empty-text-wrapper">
-					Вы можете
-					<button
-						type="button"
-						class="btn btn-secondary btn-empty-login"
-						(click)="authModal.open('login'); $event.stopPropagation()"
-					>
-						Войти</button
-					>, чтобы просмотреть данные.
-				</div>
-			}
+			<p class="empty-text">Список пуст или результаты не найдены.</p>
 		</div>
 	} @else {
 		<app-student-table
@@ -67,6 +63,7 @@
 			(sort)="onSort($event)"
 			(rowSelect)="focusedIsuId.set($event)"
 			(rowOpen)="openDetails($event)"
+			(rowHover)="prefetch($event)"
 		/>
 	}
 </section>
@@ -77,13 +74,14 @@
 	(pageChange)="onPageChange($event)"
 />
 
-@if (modal(); as state) {
+@if (deleteState(); as state) {
 	<app-student-modal
 		[state]="state"
-		(closed)="closeModal()"
-		(save)="saveStudent($event)"
+		(closed)="closeDeletePopup()"
 		(remove)="deleteStudent($event)"
-		(switchToEdit)="openEdit($event)"
-		(cancelEdit)="backToView($event)"
+		(switchToEdit)="editFromDeletePopup($event)"
 	/>
 }
+
+<!-- popups of the child routes: /students/new, /students/:id, /students/:id/edit, /profile -->
+<router-outlet />

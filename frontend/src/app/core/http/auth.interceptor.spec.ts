@@ -7,7 +7,7 @@ import { StorageManager } from '../storage/storage-manager';
 import { ApiError } from './api-error';
 import { authInterceptor } from './auth.interceptor';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = '/api';
 const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
 
 const session = (accessToken: string, refreshToken: string): AuthResponse => ({

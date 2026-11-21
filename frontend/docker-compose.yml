@@ -1,0 +1,37 @@
+# Frontend (Analog, SSR) + Java backend. Запуск:
+#   cp .env.example .env   # и поменяйте значения
+#   docker compose up --build
+# Приложение: http://localhost:3000
+services:
+  backend:
+    build:
+      context: ${BACKEND_CONTEXT:-../backend}
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET в файле .env}
+      DB_URL: jdbc:sqlite:/app/data/students.db
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Задайте ADMIN_USERNAME в файле .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Задайте ADMIN_EMAIL в файле .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Задайте ADMIN_PASSWORD (BCrypt-хэш) в файле .env}
+      ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-Администратор}
+      ADMIN_ROLE: ${ADMIN_ROLE:-ADMIN}
+    volumes:
+      - backend-data:/app/data
+    # Наружу порт не публикуется: frontend обращается к backend по внутренней сети.
+    # Для отладки (Postman, Swagger) раскомментируйте:
+    # ports:
+    #   - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build: .
+    environment:
+      BACKEND_URL: http://backend:8080
+      BACKEND_API_PATH: /api
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-data:

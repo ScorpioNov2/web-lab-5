@@ -10,27 +10,33 @@ import {
 	tap,
 	throwError,
 } from 'rxjs';
+import { DataCache } from '../cache/data-cache';
 import { ApiError, SESSION_EXPIRED_MESSAGE } from '../http/api-error';
 import { StorageManager } from '../storage/storage-manager';
 import { AuthApi } from './auth.api';
-import { AuthResponse, LoginRequest, RegisterRequest, User } from './auth.model';
-import { UserApi } from './user.api';
+import { AuthResponse, LoginRequest, RegisterRequest } from './auth.model';
+import { canManageStudents } from './roles';
+import { sessionRole } from './session';
 
 /**
- * Owns the auth session: what the old AuthHandler + UserHandler + the token-refresh hooks of
- * httpClient.js did. The cookie (via StorageManager) stays the source of truth; the signals
- * mirror it so templates can react to login/logout.
+ * Owns the auth session. The cookie (via StorageManager) stays the source of truth; the signal
+ * mirrors it so templates can react to login/logout. The cookie also carries the user, so the
+ * server render knows who is signed in without calling the backend. (The backend has no
+ * "current user" endpoint: the profile is the `user` of the last login / token refresh.)
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 	private readonly authApi = inject(AuthApi);
-	private readonly userApi = inject(UserApi);
 	private readonly storage = inject(StorageManager);
+	private readonly cache = inject(DataCache);
 
 	private readonly session = signal<AuthResponse | null>(this.storage.getAuthSession());
 
-	readonly currentUser = signal<User | null>(this.session()?.user ?? null);
+	readonly currentUser = computed(() => this.session()?.user ?? null);
 	readonly isLoggedIn = computed(() => !!this.session()?.accessToken);
+	/** ADMIN / USER, or null for a guest. */
+	readonly role = computed(() => sessionRole(this.session()));
+	readonly canManageStudents = computed(() => canManageStudents(this.role()));
 
 	/** Emits when the refresh token no longer works and the UI must go back to guest state. */
 	readonly sessionExpired$ = new Subject<void>();
@@ -52,24 +58,6 @@ export class AuthService {
 
 	logout(): void {
 		this.clearSession();
-	}
-
-	/** Startup check: restore the profile of an existing session or fall back to guest. */
-	restoreSession(): void {
-		if (!this.storage.getAccessToken()) return;
-		if (this.currentUser()) return;
-
-		this.userApi.getCurrent().subscribe({
-			next: (user) => this.currentUser.set(user),
-			error: (error: unknown) => {
-				console.error(
-					'Не удалось загрузить профиль пользователя:',
-					error instanceof Error ? error.message : error,
-				);
-				// Dirty credentials: drop them and revert to guest.
-				this.clearSession();
-			},
-		});
 	}
 
 	/** Refresh failed (refreshToken expired/revoked): revert to guest state. */
@@ -118,15 +106,16 @@ export class AuthService {
 	}
 
 	private saveSession(response: AuthResponse): void {
+		// Cached data belongs to the previous identity (or to a token that is being replaced).
+		if (response.user?.id !== this.session()?.user?.id) this.cache.clear();
 		this.storage.saveAuthSession(response);
 		this.session.set(response);
-		this.currentUser.set(response.user);
 	}
 
 	private clearSession(): void {
+		this.cache.clear();
 		this.storage.clearAuth();
 		this.session.set(null);
-		this.currentUser.set(null);
 	}
 
 	private sessionExpiredError(): ApiError {

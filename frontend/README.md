@@ -1,59 +1,133 @@
-# Frontend
+# Лабораторная работа №5. Frontend на AnalogJS
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.5.
+Frontend системы управления студентами, перенесённый с Angular (лаб. №4) на метафреймворк **AnalogJS**
+(Angular 22 + Vite + Nitro). Бизнес-логика, авторизация и база данных остаются в Java-backend.
 
-## Development server
+> **Папка `public/`** (картинки темы) в архив не входила. Скопируйте её из лаб. №4 в корень этого проекта
+> (`public/assets/...`). Пути к файлам не менялись: Vite раздаёт `public/` так же, как Angular CLI.
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Запуск
 
 ```bash
-ng generate component component-name
+npm ci
+npm run dev          # http://localhost:4200 (SSR включён и в dev-режиме)
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Нужен запущенный Java-backend (по умолчанию `http://localhost:8080`, REST под `/api`).
 
 ```bash
-ng generate --help
+npm run build        # сборка: dist/analog (Node-сервер Nitro + клиентские файлы)
+npm run start:prod   # node dist/analog/server/index.mjs, порт 3000
+npm test             # unit-тесты (Vitest)
+npm run lint
 ```
 
-## Building
-
-To build the project run:
+### Docker
 
 ```bash
-ng build
+cp .env.example .env     # поменяйте JWT_SECRET и данные администратора
+docker compose up --build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Приложение: http://localhost:3000. В `docker-compose.yml` backend собирается из `BACKEND_CONTEXT`
+(по умолчанию `../backend`, папка с его `Dockerfile`), порт backend наружу не публикуется.
+Образ frontend: многоэтапная сборка, в итоговом образе только `dist/analog` (8 МБ), запуск от пользователя `node`.
 
-## Running unit tests
+### Переменные окружения frontend-сервера
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+| Переменная         | По умолчанию            | Назначение                                    |
+| ------------------ | ----------------------- | --------------------------------------------- |
+| `BACKEND_URL`      | `http://localhost:8080` | адрес Java-backend (в Docker: `http://backend:8080`) |
+| `BACKEND_API_PATH` | `/api`                  | базовый путь REST API backend                 |
+| `PORT`             | `3000`                  | порт Node-сервера (в dev: 4200)               |
 
-```bash
-ng test
-```
+## Маршруты и доступ
 
-## Running end-to-end tests
+Окна (добавление, просмотр, редактирование, профиль) показываются **поверх таблицы** как в лаб. №4 (с кнопкой ×,
+Esc и закрытием по клику на фон), но у каждого окна есть свой адрес. Таблица — общий layout этих маршрутов
+(`pages/(app).page.ts`), окна выводятся в её `<router-outlet>`; открытие и закрытие окна таблицу не перезагружает.
 
-For end-to-end (e2e) testing, run:
+| Маршрут                | Файл                                       | Что показывает / кто может открыть |
+| ---------------------- | ------------------------------------------ | ---------------------------------- |
+| `/`                    | `pages/index.page.ts`                      | «дверь»: → `/students` или `/login` |
+| `/login`, `/register`  | `pages/login.page.ts`, `register.page.ts`  | пустая таблица как для гостя + окно входа / регистрации (гость; вошедшего → `/students`) |
+| `/students`            | `pages/(app)/students/index.page.ts`       | таблица. ADMIN, USER               |
+| `/students/[id]`       | `pages/(app)/students/[id]/index.page.ts`  | окно просмотра (динамический маршрут, `id` = ИСУ ID). ADMIN, USER |
+| `/students/new`        | `pages/(app)/students/new.page.ts`         | окно добавления. Только ADMIN      |
+| `/students/[id]/edit`  | `pages/(app)/students/[id]/edit.page.ts`   | окно редактирования. Только ADMIN  |
+| `/profile`             | `pages/(app)/profile.page.ts`              | окно профиля (иконка в шапке). ADMIN, USER |
+| `/forbidden`           | `pages/forbidden.page.ts`                  | страница с HTTP 403                |
+| любой другой           | `pages/[...not-found].page.ts`             | страница с HTTP 404                |
 
-```bash
-ng e2e
-```
+Номер страницы, поиск и сортировка таблицы сохраняются в адресе (`?page=&search=&sort=&direction=`) и не теряются
+при открытии и закрытии окон.
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Роли backend: `ADMIN` (чтение + создание/изменение/удаление) и `USER` (только чтение).
+Правила доступа записаны **один раз** в `src/app/core/auth/route-access.ts` и применяются дважды:
+на сервере в middleware (настоящий HTTP 302) и в браузере в route-guard (переходы внутри приложения).
 
-## Additional Resources
+## Как выполнены требования лабораторной
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Требование                              | Реализация |
+| --------------------------------------- | ---------- |
+| SSR                                     | `provideServerRendering`, `src/main.server.ts`; данные страницы загружаются на сервере до отправки HTML |
+| Динамические маршруты `/students/[id]`  | файловая маршрутизация Analog (`pages/students/[id]/...`) |
+| Middleware и редиректы                  | `src/server/middleware/auth.ts` (Nitro) + `core/auth/access.guard.ts` |
+| Loading / Error / 404                   | resolver возвращает `Loaded<T>` (ошибка — значение, не исключение); `shared/ui/error-state` (в таблице и внутри окна); индикатор в `app.ts`; HTTP-статус ответа (404/403/503) выставляет `core/ssr/http-status.ts` |
+| Кеширование с обновлением после изменений | `core/cache/data-cache.ts`: cache hit/miss, stale-while-revalidate, перезагрузка по таймеру (5 с на списке), сброс по событию (`invalidate` после POST/PATCH/DELETE, таблица реагирует на `invalidated$`), передача данных SSR → браузер через `TransferState` |
+| JWT, регистрация, профиль               | `core/auth/*`, `features/auth/*`, `features/profile/*` |
+| Поиск, фильтры, сортировка, пагинация   | состояние в URL (`?page=&search=&sort=&direction=`), `student-criteria.ts` |
+| CRUD, роли                              | `features/students/*`; кнопки управления только у ADMIN |
+| Адаптивность                            | стили лаб. №4 сохранены; проверено на ширине 375 px (в том числе окна и шапка) |
+| Docker                                  | `Dockerfile`, `docker-compose.yml` |
+| Только frontend-функции на сервере      | Nitro используется для SSR, middleware и прозрачного прокси `/api` → backend (без логики и без БД) |
+
+## Как это устроено
+
+**Браузер ходит только на свой origin.** Запросы `/api/**` принимает `src/server/routes/api/[...path].ts` и пересылает
+в Java-backend. Поэтому не нужен CORS (backend разрешает лишь несколько фиксированных localhost-адресов), а cookie
+сессии остаётся first-party. Прокси пересылает только `Authorization`, `Content-Type`, `Accept`, `Accept-Language`:
+заголовок `Origin` намеренно **не** пересылается, иначе backend принял бы вызов за кросс-доменный и ответил бы
+`Invalid CORS request`. При SSR сервер обращается к backend напрямую по `BACKEND_URL`.
+
+**Сессия и SSR.** Сессия хранится в cookie `auth_secure_session` (как в лаб. №4), поэтому сервер при рендере знает,
+кто вошёл, без обращения к backend. Refresh-токен backend **одноразовый** (ротация), поэтому обновлять сессию
+для запроса страницы может только одно место — middleware, *до* рендера: оно получает новую пару токенов, отправляет
+её браузеру в `Set-Cookie` и подменяет cookie текущего запроса. Одновременные запросы с одним старым токеном
+(например, браузер восстанавливает несколько вкладок) делят один вызов `/auth/refresh`. Если backend недоступен,
+пользователь не выходит из системы: страница показывает состояние «Сервер недоступен» со статусом 503.
+
+**Роль берётся из claim `role` JWT**, запасной вариант — `user.role` из cookie. Подпись токена frontend не проверяет:
+это навигация, а не граница безопасности. Каждый API-вызов backend проверяет права сам.
+
+**Профиль** показывает `user` из ответа `/auth/login` и `/auth/refresh`: в backend нет эндпоинта «текущий пользователь»
+(`/users/me`), которого ждал код лаб. №4, поэтому `UserApi` убран.
+
+**Prerender отключён** (`prerender: { routes: [] }` в `vite.config.ts`): по умолчанию Analog сохраняет `/` как статический
+`index.html`, а Nitro отдаёт статику раньше middleware, то есть правила доступа для этого адреса не сработали бы.
+
+## Что изменилось по сравнению с лаб. №4
+
+Интерфейс сохранён: окна `StudentModal` и `AuthModal`, их кнопки, таблица, тулбар и стили взяты из лаб. №4 без изменений
+(добавлено только то, что нужно для ролей и маршрутов).
+
+- Шапка: слева название (ссылка на главную), справа иконка профиля (человек по плечи) и «Выход». Иконка открывает `/profile`.
+- Тулбар: те же три кнопки. У USER они неактивны, подсказка объясняет почему; у ADMIN — как раньше.
+- Окно просмотра у USER без «Обновить» / «Удалить».
+- Гостя middleware отправляет на `/login?redirect=...`: там та же пустая таблица, что и раньше, и окно входа открывается само.
+  После входа пользователь возвращается на страницу, с которой его отправили. При истёкшей сессии — то же самое.
+- Если номера страницы больше нет (удалили последнего студента на последней странице или в адресе `?page=99`),
+  таблица переходит на ближайшую страницу вместо пустого экрана.
+- Таблица после добавления / изменения / удаления перечитывает себя сама (сброс кеша по событию).
+- Пароль при регистрации: от 8 до 72 символов (то же правило, что `@Size(min = 8, max = 72)` в backend; раньше было 6).
+- Ошибка валидации backend показывает первое проблемное поле, а не только «Request validation failed».
+- ИСУ ID и номер общежития должны быть положительными (как `@Positive` в backend).
+- Дата «Срок заселения» форматируется в UTC, чтобы в разных часовых поясах (и на сервере) показывался один и тот же день.
+- Удалён `tools/auto-create-students.js`: он слал данные на старый backend (`127.0.0.1:8000`, snake_case).
+
+## Проверка
+
+- 158 unit-тестов: правила доступа, JWT/сессия, кеш (hit/miss/stale/invalidate/TransferState), интерцептор с ротацией
+  токена, resolver'ы, API, формы.
+- Вручную проверено сквозным сценарием (SSR, редиректы, 403/404/503, обновление сессии, гидрация без ошибок в dev-режиме,
+  CRUD под ADMIN и USER, мобильная ширина) на Chromium против заглушки backend с тем же контрактом.

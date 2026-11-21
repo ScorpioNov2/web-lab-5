@@ -1,10 +1,12 @@
 import { convertToParamMap } from '@angular/router';
 import {
 	DEFAULT_CRITERIA,
+	clampPage,
 	nextSort,
-	pageAfterDeletion,
 	readCriteria,
+	ROWS_PER_PAGE,
 	toQueryParams,
+	toSearchRequest,
 } from './student-criteria';
 
 describe('student criteria', () => {
@@ -85,20 +87,49 @@ describe('student criteria', () => {
 		});
 	});
 
-	describe('pageAfterDeletion', () => {
-		it('steps back when the only student of the last page was deleted', () => {
-			// 11 students, 10 per page: page 2 holds only one
-			expect(pageAfterDeletion(2, 10, 11)).toBe(1);
+	describe('clampPage', () => {
+		it('steps back when the page no longer exists (the last student of the last page was deleted)', () => {
+			expect(clampPage(2, 1)).toBe(1);
+			expect(clampPage(99, 3)).toBe(3);
 		});
 
-		it('stays when the page still has other students', () => {
-			expect(pageAfterDeletion(2, 10, 12)).toBe(2);
-			expect(pageAfterDeletion(1, 10, 11)).toBe(1);
+		it('keeps a page that exists', () => {
+			expect(clampPage(2, 3)).toBe(2);
+			expect(clampPage(3, 3)).toBe(3);
 		});
 
-		it('never goes below page 1 and ignores the last remaining student', () => {
-			expect(pageAfterDeletion(1, 10, 1)).toBe(1);
-			expect(pageAfterDeletion(1, 10, 0)).toBe(1);
+		it('never goes below page 1, also when nothing is left at all', () => {
+			expect(clampPage(1, 0)).toBe(1);
+			expect(clampPage(4, 0)).toBe(1);
 		});
+	});
+});
+
+describe('toSearchRequest', () => {
+	it('converts the 1-based page of the screen to the 0-based page of the backend', () => {
+		expect(toSearchRequest({ ...DEFAULT_CRITERIA, pageNumber: 3 })).toMatchObject({
+			page: 2,
+			size: ROWS_PER_PAGE,
+		});
+	});
+
+	it('sends the sort only while both the field and the direction are set', () => {
+		expect(
+			toSearchRequest({
+				searchKeyword: 'ив',
+				sortField: 'isuId',
+				sortDirection: 'desc',
+				pageNumber: 1,
+			}),
+		).toEqual({
+			search: 'ив',
+			sortBy: 'isuId',
+			sortDirection: 'desc',
+			page: 0,
+			size: ROWS_PER_PAGE,
+		});
+		expect(
+			toSearchRequest({ ...DEFAULT_CRITERIA, sortField: 'isuId', sortDirection: '' }),
+		).toMatchObject({ sortBy: '', sortDirection: '' });
 	});
 });

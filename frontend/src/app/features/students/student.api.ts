@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
+import { CacheOptions, DataCache } from '../../core/cache/data-cache';
 import { API_BASE_URL } from '../../core/config/api-base-url';
 import { PagedResponse, PagedResponseDto, toPagedResponse } from '../../core/models/paged-response';
 import {
@@ -10,6 +11,9 @@ import {
 	StudentSearchRequest,
 	toStudent,
 } from './student.model';
+
+/** Every cache key of this API starts with it; a mutation drops them all. */
+export const STUDENTS_CACHE_PREFIX = 'students:';
 
 /** (?page=0&size=20...) - skips null/undefined/empty values, same as the old toQueryString(). */
 export function toSearchParams(request: StudentSearchRequest): HttpParams {
@@ -49,26 +53,53 @@ function toPayload(data: StudentPayload): StudentPayload {
 	};
 }
 
+/**
+ * Students REST API. Reads go through the DataCache (the cache keeps the raw DTO, which is plain
+ * JSON and can travel from the server render to the browser); every write invalidates the cached
+ * students, so the next read is fresh.
+ */
 @Injectable({ providedIn: 'root' })
 export class StudentApi {
 	private readonly http = inject(HttpClient);
+	private readonly cache = inject(DataCache);
 	private readonly url = `${inject(API_BASE_URL)}/students`;
 
 	/** Получить список студентов (GET с пагинацией и фильтрами) */
-	search(request: StudentSearchRequest): Observable<PagedResponse<Student>> {
-		return this.http
-			.get<PagedResponseDto<StudentDto>>(this.url, { params: toSearchParams(request) })
+	search(
+		request: StudentSearchRequest,
+		options?: CacheOptions,
+	): Observable<PagedResponse<Student>> {
+		const params = toSearchParams(request);
+		return this.cache
+			.get(
+				`${STUDENTS_CACHE_PREFIX}list?${params.toString()}`,
+				() => this.http.get<PagedResponseDto<StudentDto>>(this.url, { params }),
+				options,
+			)
 			.pipe(map((dto) => toPagedResponse(dto, toStudent)));
 	}
 
 	/** Получить детальную информацию о студенте по ISU ID (GET) */
-	getByIsuId(isuId: number): Observable<Student> {
-		return this.http.get<StudentDto>(`${this.url}/${isuId}`).pipe(map(toStudent));
+	getByIsuId(isuId: number, options?: CacheOptions): Observable<Student> {
+		return this.cache
+			.get(
+				`${STUDENTS_CACHE_PREFIX}item:${isuId}`,
+				() => this.http.get<StudentDto>(`${this.url}/${isuId}`),
+				options,
+			)
+			.pipe(map(toStudent));
+	}
+
+	/** Warm the cache before the user opens a student (hover over a link). Errors are ignored. */
+	prefetch(isuId: number): void {
+		this.getByIsuId(isuId).subscribe({ error: () => undefined });
 	}
 
 	/** Создать нового студента (POST) */
 	create(data: StudentPayload): Observable<Student> {
-		return this.http.post<StudentDto>(this.url, toPayload(data)).pipe(map(toStudent));
+		return this.http
+			.post<StudentDto>(this.url, toPayload(data))
+			.pipe(this.invalidateStudents(), map(toStudent));
 	}
 
 	/**
@@ -78,11 +109,16 @@ export class StudentApi {
 	update(isuId: number, data: StudentPayload): Observable<Student> {
 		return this.http
 			.patch<StudentDto>(`${this.url}/${isuId}`, toPayload(data))
-			.pipe(map(toStudent));
+			.pipe(this.invalidateStudents(), map(toStudent));
 	}
 
 	/** Удалить студента по ISU ID (DELETE) */
 	delete(isuId: number): Observable<void> {
-		return this.http.delete<void>(`${this.url}/${isuId}`);
+		return this.http.delete<void>(`${this.url}/${isuId}`).pipe(this.invalidateStudents());
+	}
+
+	/** Event-based revalidation: after a successful write nothing cached about students is trusted. */
+	private invalidateStudents<T>() {
+		return tap<T>(() => this.cache.invalidate(STUDENTS_CACHE_PREFIX));
 	}
 }
