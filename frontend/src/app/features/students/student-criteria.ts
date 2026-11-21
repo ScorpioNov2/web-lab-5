@@ -1,6 +1,10 @@
 import { ParamMap, Params } from '@angular/router';
+import { StudentSearchRequest } from './student.model';
 
 export type SortDirection = 'asc' | 'desc' | '';
+
+/** Rows in one page of the table. */
+export const ROWS_PER_PAGE = 10;
 
 /** Everything that defines which students the table shows. Mirrored into the URL query. */
 export interface StudentCriteria {
@@ -46,6 +50,19 @@ export function toQueryParams(criteria: StudentCriteria): Params {
 	};
 }
 
+/** The backend query (0-based page) for the criteria of the screen. */
+export function toSearchRequest(criteria: StudentCriteria): StudentSearchRequest {
+	// Circle (asc -> desc -> off[isuId])
+	const hasSort = !!criteria.sortField && !!criteria.sortDirection;
+	return {
+		search: criteria.searchKeyword,
+		sortBy: hasSort ? criteria.sortField : '',
+		sortDirection: hasSort ? criteria.sortDirection : '',
+		page: criteria.pageNumber - 1,
+		size: ROWS_PER_PAGE,
+	};
+}
+
 /** Click on a column header: asc -> desc -> off; a different column starts at asc. */
 export function nextSort(
 	current: Pick<StudentCriteria, 'sortField' | 'sortDirection'>,
@@ -60,17 +77,9 @@ export function nextSort(
 }
 
 /**
- * Page to show after a student was deleted: when the deleted student was the only one on the
- * last page, step back one page so the table does not end up empty.
+ * Keeps the page number inside 1..totalPages. After the last student of the last page is deleted
+ * (or a hand-typed `?page=99`) the table would be empty: this is the page to show instead.
  */
-export function pageAfterDeletion(
-	currentPage: number,
-	rowsPerPage: number,
-	totalBeforeDeletion: number,
-): number {
-	const firstRowIndexOnPage = (currentPage - 1) * rowsPerPage;
-	if (totalBeforeDeletion > 1 && firstRowIndexOnPage >= totalBeforeDeletion - 1) {
-		return Math.max(1, currentPage - 1);
-	}
-	return currentPage;
+export function clampPage(currentPage: number, totalPages: number): number {
+	return Math.max(1, Math.min(currentPage, totalPages));
 }

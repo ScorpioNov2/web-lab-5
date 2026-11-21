@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { authInterceptor } from '../../../core/http/auth.interceptor';
 import { StorageManager } from '../../../core/storage/storage-manager';
@@ -9,7 +10,7 @@ import { WelcomePigeonService } from '../../../theme/welcome-pigeon/welcome-pige
 import { AuthModalService } from '../auth-modal.service';
 import { AuthModal } from './auth-modal';
 
-const API = 'http://localhost:8080/api';
+const API = '/api';
 
 describe('AuthModal', () => {
 	let fixture: ComponentFixture<AuthModal>;
@@ -26,6 +27,8 @@ describe('AuthModal', () => {
 			],
 		});
 		TestBed.inject(StorageManager).clearAuth();
+		// A login navigates to the page the guest came from; there are no routes in this test.
+		vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 		controller = TestBed.inject(HttpTestingController);
 		modal = TestBed.inject(AuthModalService);
 		alerts = TestBed.inject(AlertService);
@@ -86,13 +89,13 @@ describe('AuthModal', () => {
 		modal.open('login');
 		await render();
 		type('auth-login-identifier', 'ivan_ivanov');
-		type('auth-password', 'secret1');
+		type('auth-password', 'secret12');
 		submit();
 
 		const request = controller.expectOne(`${API}/auth/login`);
 		expect(request.request.body).toEqual({
 			loginIdentifier: 'ivan_ivanov',
-			password: 'secret1',
+			password: 'secret12',
 		});
 		request.flush({
 			accessToken: 'A',
@@ -145,8 +148,8 @@ describe('AuthModal', () => {
 		type('auth-fullName', 'Иван Иванов');
 		type('auth-username', 'ivan_ivanov');
 		type('auth-email', 'ivan@mail.ru');
-		type('auth-register-password', 'secret1');
-		type('auth-password-confirm', 'secret1');
+		type('auth-register-password', 'secret12');
+		type('auth-password-confirm', 'secret12');
 		submit();
 
 		const request = controller.expectOne(`${API}/auth/register`);
@@ -154,8 +157,8 @@ describe('AuthModal', () => {
 			fullName: 'Иван Иванов',
 			username: 'ivan_ivanov',
 			email: 'ivan@mail.ru',
-			password: 'secret1',
-			passwordConfirm: 'secret1',
+			password: 'secret12',
+			passwordConfirm: 'secret12',
 		});
 		request.flush({});
 		await render();
@@ -174,7 +177,7 @@ describe('AuthModal', () => {
 		type('auth-fullName', 'Иван Иванов');
 		type('auth-username', 'ivan_ivanov');
 		type('auth-email', 'ivan@mail.ru');
-		type('auth-register-password', 'secret1');
+		type('auth-register-password', 'secret12');
 		type('auth-password-confirm', 'secret2');
 		submit();
 
@@ -203,10 +206,48 @@ describe('AuthModal', () => {
 		expect(field('auth-password').type).toBe('password');
 	});
 
-	it('opens the login form when the session expires', async () => {
-		await render();
-		TestBed.inject(AuthService).sessionExpired$.next();
-		await render();
-		expect(modal.mode()).toBe('login');
+	describe('where the user lands after logging in', () => {
+		const session = {
+			accessToken: 'A',
+			refreshToken: 'R',
+			tokenType: 'Bearer',
+			accessExpiresInSeconds: 900,
+			user: {
+				id: 1,
+				fullName: 'Иван Иванов',
+				username: 'ivan_ivanov',
+				email: 'i@i.ru',
+				role: 'USER',
+			},
+		};
+
+		async function loginFrom(url: string) {
+			const router = TestBed.inject(Router);
+			vi.spyOn(router, 'url', 'get').mockReturnValue(url);
+			const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+			modal.open('login');
+			await render();
+			type('auth-login-identifier', 'ivan_ivanov');
+			type('auth-password', 'secret12');
+			submit();
+			controller.expectOne(`${API}/auth/login`).flush(session);
+			await render();
+			return navigate;
+		}
+
+		it('goes back to the page the guest was sent away from (?redirect=)', async () => {
+			const navigate = await loginFrom('/login?redirect=%2Fstudents%2F42%3Fpage%3D2');
+			expect(navigate).toHaveBeenCalledWith('/students/42?page=2');
+		});
+
+		it('goes to the student list when there is no ?redirect=', async () => {
+			const navigate = await loginFrom('/forbidden');
+			expect(navigate).toHaveBeenCalledWith('/students');
+		});
+
+		it('never follows a ?redirect= that leaves the site', async () => {
+			const navigate = await loginFrom('/login?redirect=https%3A%2F%2Fevil.example');
+			expect(navigate).toHaveBeenCalledWith('/students');
+		});
 	});
 });

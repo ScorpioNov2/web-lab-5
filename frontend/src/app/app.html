@@ -9,6 +9,9 @@
 </div>
 
 <!-- global overlays -->
+@if (loading.isLoading()) {
+	<div class="nav-progress" role="progressbar" aria-label="Загрузка"></div>
+}
 <app-auth-modal />
 <app-alert-container />
 <app-welcome-pigeon />

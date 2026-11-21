@@ -1,0 +1,37 @@
+:host {
+	display: block;
+	width: 100%;
+}
+
+.error-state {
+	max-width: 480px;
+	margin: 0 auto;
+	padding: 36px 20px;
+	text-align: center;
+}
+
+.error-title {
+	font-size: 20px;
+	font-weight: 600;
+	margin-bottom: 10px;
+}
+
+.error-code {
+	font-weight: 400;
+	color: var(--color-stroke-sub);
+}
+
+.error-hint {
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--color-stroke-sub);
+	margin-bottom: 20px;
+	overflow-wrap: anywhere;
+}
+
+.error-actions {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 12px;
+}

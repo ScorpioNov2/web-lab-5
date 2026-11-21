@@ -21,6 +21,8 @@
 				[class.focused-row]="student.isuId === focusedIsuId()"
 				(click)="rowSelect.emit(student.isuId)"
 				(dblclick)="rowOpen.emit(student.isuId)"
+				(mouseenter)="rowHover.emit(student.isuId)"
+				(focus)="rowHover.emit(student.isuId)"
 				(keydown.enter)="rowOpen.emit(student.isuId)"
 				(keydown.space)="onRowSpace($event, student.isuId)"
 			>

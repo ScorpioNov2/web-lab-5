@@ -1,5 +1,6 @@
+import { isPlatformServer } from '@angular/common';
 import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, PLATFORM_ID } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { API_BASE_URL } from '../config/api-base-url';
@@ -16,6 +17,10 @@ import { toApiError } from './api-error';
  * /auth/* is skipped on purpose: the backend (JwtAuthenticationFilter) answers 401 to ANY request
  * carrying an expired Bearer token, including /auth/refresh and /auth/login, so sending the old
  * access token there would make a refresh/login impossible.
+ *
+ * On the SERVER there is no refresh: the refresh token is single-use, and a server render cannot
+ * hand the new pair to the browser. An expired token is renewed BEFORE the render, by the Nitro
+ * middleware; a 401 that still happens here is reported to the page as it is.
  */
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
 	const baseUrl = inject(API_BASE_URL);
@@ -23,6 +28,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
 	const storage = inject(StorageManager);
 	const auth = inject(AuthService);
+	const isServer = isPlatformServer(inject(PLATFORM_ID));
 
 	const isAuthEndpoint = request.url.startsWith(`${baseUrl}/auth/`);
 	const withToken = (token: string | null): HttpRequest<unknown> =>
@@ -32,7 +38,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
 	return next(withToken(usedToken)).pipe(
 		catchError((error: unknown) => {
-			if (error instanceof HttpErrorResponse && error.status === 401 && usedToken) {
+			if (
+				!isServer &&
+				error instanceof HttpErrorResponse &&
+				error.status === 401 &&
+				usedToken
+			) {
 				return auth.ensureFreshSession(usedToken).pipe(
 					switchMap(() => next(withToken(storage.getAccessToken()))),
 					catchError((retryError: unknown) => throwError(() => toApiError(retryError))),

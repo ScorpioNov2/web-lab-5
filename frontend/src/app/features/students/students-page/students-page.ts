@@ -1,15 +1,22 @@
+import { isPlatformBrowser } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import {
+	afterNextRender,
 	Component,
 	computed,
+	DestroyRef,
 	effect,
 	ElementRef,
 	inject,
+	input,
+	linkedSignal,
+	PLATFORM_ID,
 	signal,
 	untracked,
 	viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import {
 	catchError,
 	distinctUntilChanged,
@@ -17,153 +24,173 @@ import {
 	filter,
 	finalize,
 	firstValueFrom,
+	from,
+	interval,
 	map,
-	merge,
-	Observable,
-	skip,
-	startWith,
 	Subject,
 	switchMap,
 	tap,
 	timer,
 } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { CONNECTION_ERROR_MESSAGE, errorMessage } from '../../../core/http/api-error';
+import { DataCache } from '../../../core/cache/data-cache';
+import { errorMessage } from '../../../core/http/api-error';
+import { Loaded, loadedOk } from '../../../core/http/loaded';
 import { PagedResponse } from '../../../core/models/paged-response';
 import { AlertService } from '../../../shared/ui/alert/alert.service';
-import { LoadingService } from '../../../shared/ui/loading/loading.service';
+import { ErrorState } from '../../../shared/ui/error-state/error-state';
 import { LoadingOverlay } from '../../../shared/ui/loading/loading-overlay';
+import { LoadingService } from '../../../shared/ui/loading/loading.service';
 import { Pagination } from '../../../shared/ui/pagination/pagination';
-import { AuthModalService } from '../../auth/auth-modal.service';
-import { StudentApi } from '../student.api';
-import { Student } from '../student.model';
 import {
+	clampPage,
 	nextSort,
-	pageAfterDeletion,
 	readCriteria,
 	StudentCriteria,
 	toQueryParams,
+	toSearchRequest,
 } from '../student-criteria';
-import { StudentModal, StudentModalState, StudentSaveEvent } from '../student-modal/student-modal';
+import { StudentModal, StudentModalState } from '../student-modal/student-modal';
 import { StudentTable } from '../student-table/student-table';
+import { STUDENTS_CACHE_PREFIX, StudentApi } from '../student.api';
+import { Student } from '../student.model';
+
+/** Pause after the last keystroke before the search is sent. */
+const SEARCH_DEBOUNCE_MS = 1000;
+/** Time-based revalidation: how often the open table is silently refreshed in the browser. */
+export const AUTO_REFRESH_MS = 5000;
 
 /**
- * The students screen: toolbar, table, pagination and the student popup.
- * Takes over what ApplicationController + StudentHandler did in the vanilla version.
+ * The students screen: toolbar, table, pagination. It is the LAYOUT of the student routes: the
+ * add / view / edit popups and the profile popup are child routes rendered in its outlet, so the
+ * table stays on screen behind them. The criteria live in the URL query; the route's resolver
+ * loads the page of students (on the server for the first render).
  */
 @Component({
 	selector: 'app-students-page',
-	imports: [StudentTable, Pagination, StudentModal, LoadingOverlay],
+	imports: [RouterOutlet, StudentTable, Pagination, LoadingOverlay, ErrorState, StudentModal],
 	templateUrl: './students-page.html',
 	styleUrl: './students-page.scss',
 	host: { '(document:click)': 'onDocumentClick($event)' },
 })
 export class StudentsPage {
 	private readonly api = inject(StudentApi);
+	private readonly cache = inject(DataCache);
 	private readonly alert = inject(AlertService);
-	private readonly loading = inject(LoadingService);
 	private readonly router = inject(Router);
 	private readonly route = inject(ActivatedRoute);
+	private readonly destroyRef = inject(DestroyRef);
+	private readonly document = inject(DOCUMENT);
+	private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+	protected readonly loading = inject(LoadingService);
 	protected readonly auth = inject(AuthService);
-	protected readonly authModal = inject(AuthModalService);
 
-	private readonly tableContainer = viewChild.required<ElementRef<HTMLElement>>('tableContainer');
+	/** The resolver's answer (`resolve: { result: studentsResolver }`), bound by the router. */
+	readonly result = input.required<Loaded<PagedResponse<Student>>>();
 
-	private readonly rowsPerPage = 10;
-	private readonly searchDebounceMs = 1000;
+	protected readonly criteria = toSignal(this.route.queryParamMap.pipe(map(readCriteria)), {
+		initialValue: readCriteria(this.route.snapshot.queryParamMap),
+	});
 
-	/** Search / sort / page. Read from the URL once at startup, mirrored back into it on every refresh. */
-	protected readonly criteria = signal<StudentCriteria>(
-		readCriteria(this.route.snapshot.queryParamMap),
-	);
+	/** What the table shows: the resolver's data, replaced silently by background refreshes. */
+	private readonly live = linkedSignal<Loaded<PagedResponse<Student>>>(() => this.result());
 
-	/** null until a page was loaded successfully (guest or backend unreachable). */
-	protected readonly result = signal<PagedResponse<Student> | null>(null);
-	protected readonly totalStudents = computed(() => this.result()?.totalElements ?? 0);
-	protected readonly students = computed(() => this.result()?.content ?? []);
-	protected readonly totalPages = computed(() => this.result()?.totalPages || 1);
+	protected readonly error = computed(() => {
+		const live = this.live();
+		return live.ok ? null : live.error;
+	});
+	private readonly page = computed(() => {
+		const live = this.live();
+		return live.ok ? live.data : null;
+	});
+	protected readonly students = computed(() => this.page()?.content ?? []);
+	protected readonly totalStudents = computed(() => this.page()?.totalElements ?? 0);
+	protected readonly totalPages = computed(() => this.page()?.totalPages || 1);
 
-	/** ISU ID of the selected table row */
+	/** ISU ID of the selected row */
 	protected readonly focusedIsuId = signal<number | null>(null);
 
-	/** null = no popup */
-	protected readonly modal = signal<StudentModalState | null>(null);
+	/** The popup opened by the "Удаление" button (view popup with the confirmation already shown). */
+	protected readonly deleteState = signal<StudentModalState | null>(null);
 
-	private readonly refresh$ = new Subject<void>();
+	private readonly tableContainer = viewChild.required<ElementRef<HTMLElement>>('tableContainer');
 	private readonly search$ = new Subject<string>();
 
 	constructor() {
+		// Search: wait for the user to stop typing, then put the keyword into the URL.
 		this.search$
 			.pipe(
-				// debounceTime(searchDebounceMs),
 				map((keyword) => keyword.trim()),
 				distinctUntilChanged(),
-				// Trigger loading immediately on typing start (once per continuous typing session)
+				// Show the loader from the first keystroke, not only when the request starts
 				tap(() => this.loading.show()),
 				switchMap((searchKeyword) =>
-					// Debounce for t ms; reset timer if typing continues, keep loading state intact
-					timer(this.searchDebounceMs).pipe(
-						tap(() => {
-							this.criteria.update((criteria) => ({
-								...criteria,
-								searchKeyword,
-								pageNumber: 1,
-							}));
-							this.syncUrl();
-						}),
-						switchMap(() => this.loadPage()),
-						// Stop loading when the API call finishes OR when the user closes the page / cancels the flow
+					timer(SEARCH_DEBOUNCE_MS).pipe(
+						switchMap(() => from(this.navigate({ searchKeyword, pageNumber: 1 }))),
 						finalize(() => this.loading.hide()),
 					),
 				),
 				takeUntilDestroyed(),
 			)
-			.subscribe((page) => this.result.set(page));
+			.subscribe();
 
-		merge(
-			this.refresh$,
-			// guest -> logged in: show the data. (skip(1) = the value at startup, covered by startWith)
-			toObservable(this.auth.isLoggedIn).pipe(skip(1), filter(Boolean)),
-			timer(5000, 5000).pipe(filter(() => this.auth.isLoggedIn())),
-		)
+		// Revalidation by event: any add / edit / delete drops the cached students, and the open
+		// table re-reads its page right away (behind the popup that is closing).
+		this.cache.invalidated$
 			.pipe(
-				startWith(undefined),
-				// Sync state back to the URL bar
-				tap(() => this.syncUrl()),
-				// A newer request cancels the one still in flight (typing in the search box)
-				switchMap(() => this.loadPage()),
+				filter((prefix) => prefix === STUDENTS_CACHE_PREFIX),
+				switchMap(() => this.fetchCurrentPage()),
 				takeUntilDestroyed(),
 			)
-			.subscribe((page) => this.result.set(page));
+			.subscribe((page) => this.live.set(loadedOk(page)));
 
-		// Back to guest (logout, expired or invalid session): forget everything that was loaded.
+		// A page that does not exist (the last student of the last page was deleted, or a
+		// hand-typed ?page=99) is replaced by the nearest one. Browser only: the server render
+		// must show exactly what the URL says, otherwise hydration would not match.
 		effect(() => {
-			if (!this.auth.isLoggedIn()) {
-				untracked(() => {
-					this.result.set(null);
-					this.focusedIsuId.set(null);
-					this.modal.set(null);
-				});
+			const page = this.page();
+			const current = this.criteria().pageNumber;
+			if (!this.isBrowser || !page) return;
+			const target = clampPage(current, page.totalPages);
+			if (target !== current) {
+				untracked(() => void this.navigate({ pageNumber: target }));
 			}
 		});
+
+		// Browser only (afterNextRender never runs during server rendering).
+		afterNextRender(() => this.startAutoRefresh());
+	}
+
+	/** Revalidation by time: re-read the current page every few seconds, without any loader. */
+	private startAutoRefresh(): void {
+		interval(AUTO_REFRESH_MS)
+			.pipe(
+				filter(() => !this.document.hidden && !this.loading.isLoading()),
+				switchMap(() => this.fetchCurrentPage()),
+				takeUntilDestroyed(this.destroyRef),
+			)
+			.subscribe((page) => this.live.set(loadedOk(page)));
+	}
+
+	private fetchCurrentPage() {
+		return this.api
+			.search(toSearchRequest(this.criteria()), { force: true })
+			.pipe(catchError(() => EMPTY));
 	}
 
 	// ---------- toolbar ----------
 
 	protected onSearch(event: Event): void {
-		const searchKeyword = (event.target as HTMLInputElement).value;
-		// this.criteria.update((criteria) => ({ ...criteria, searchKeyword, pageNumber: 1 }));
-		// this.refresh();
-		this.search$.next(searchKeyword);
+		this.search$.next((event.target as HTMLInputElement).value);
 	}
 
 	protected openAdd(): void {
-		this.modal.set({ mode: 'add', student: null });
+		void this.router.navigate(['/students', 'new'], { queryParamsHandling: 'preserve' });
 	}
 
 	protected editSelected(): void {
 		const isuId = this.focusedIsuId();
-		if (isuId !== null) void this.openEdit(isuId);
+		if (isuId !== null) this.openEdit(isuId);
 		else this.alert.error('Пожалуйста, выберите студента!');
 	}
 
@@ -177,7 +204,7 @@ export class StudentsPage {
 
 		try {
 			const student = await firstValueFrom(this.api.getByIsuId(isuId));
-			this.modal.set({ mode: 'view', student, confirmDelete: true });
+			this.deleteState.set({ mode: 'view', student, confirmDelete: true });
 		} catch (error) {
 			this.alert.error(errorMessage(error, 'Не удалось загрузить данные студента.'));
 		}
@@ -186,25 +213,26 @@ export class StudentsPage {
 	// ---------- table & pagination ----------
 
 	protected onSort(field: string): void {
-		this.criteria.update((criteria) => ({ ...criteria, ...nextSort(criteria, field) }));
-		this.refresh();
+		void this.navigate({ ...nextSort(this.criteria(), field), pageNumber: 1 });
 	}
 
 	protected onPageChange(pageNumber: number): void {
-		this.criteria.update((criteria) => ({ ...criteria, pageNumber }));
-		this.refresh();
+		void this.navigate({ pageNumber });
 	}
 
-	/** Double click on a row: open the read-only popup. */
-	protected async openDetails(isuId: number): Promise<void> {
-		try {
-			const student = await firstValueFrom(this.api.getByIsuId(isuId));
-			this.modal.set({ mode: 'view', student });
-		} catch (error) {
-			this.alert.error(
-				errorMessage(error, 'Не удалось загрузить данные студента для просмотра.'),
-			);
-		}
+	protected prefetch(isuId: number): void {
+		this.api.prefetch(isuId);
+	}
+
+	/** Double click on a row: open the read-only popup (the /students/:id route). */
+	protected openDetails(isuId: number): void {
+		void this.router.navigate(['/students', isuId], { queryParamsHandling: 'preserve' });
+	}
+
+	private openEdit(isuId: number): void {
+		void this.router.navigate(['/students', isuId, 'edit'], {
+			queryParamsHandling: 'preserve',
+		});
 	}
 
 	/** A click outside of the table drops the row selection. */
@@ -214,106 +242,39 @@ export class StudentsPage {
 		}
 	}
 
-	// ---------- student popup ----------
+	// ---------- the delete popup of the toolbar ----------
 
-	protected closeModal(): void {
-		this.modal.set(null);
+	protected closeDeletePopup(): void {
+		this.deleteState.set(null);
 	}
 
-	/** Fetches the student and switches the popup to the edit form. */
-	protected async openEdit(isuId: number): Promise<void> {
-		try {
-			const student = await firstValueFrom(this.api.getByIsuId(isuId));
-			this.modal.set({ mode: 'edit', student });
-		} catch (error) {
-			this.alert.error(
-				errorMessage(error, 'Не удалось загрузить данные студента для редактирования.'),
-			);
-		}
-	}
-
-	/** "Отмена" in the edit form: back to the (freshly loaded) read-only view. */
-	protected async backToView(isuId: number): Promise<void> {
-		try {
-			const student = await firstValueFrom(this.api.getByIsuId(isuId));
-			this.modal.set({ mode: 'view', student });
-		} catch (error) {
-			this.alert.error(errorMessage(error, 'Не удалось загрузить данные студента.'));
-		}
-	}
-
-	/** Submits a new student or the edits of an existing one. */
-	protected async saveStudent(event: StudentSaveEvent): Promise<void> {
-		try {
-			if (event.mode === 'add') {
-				await firstValueFrom(this.api.create(event.data));
-				this.alert.success('Студент успешно добавлен!');
-			} else {
-				await firstValueFrom(this.api.update(event.isuId, event.data));
-				this.alert.success('Данные студента обновлены!');
-			}
-
-			this.modal.set(null);
-			this.refresh();
-		} catch (error) {
-			console.error('[Form Submit Error]', error);
-			// The popup stays open so the user can correct the data (e.g. duplicate ISU ID).
-			this.alert.error(errorMessage(error, 'Ошибка при сохранении данных!'));
-		}
+	/** "Обновить" inside the delete popup: continue on the edit route. */
+	protected editFromDeletePopup(isuId: number): void {
+		this.deleteState.set(null);
+		this.openEdit(isuId);
 	}
 
 	protected async deleteStudent(isuId: number): Promise<void> {
-		this.modal.set(null); // the popup closes right away
+		this.deleteState.set(null); // the popup closes right away
 		try {
 			await firstValueFrom(this.api.delete(isuId));
 			this.alert.success('Студент успешно удален.');
-
-			this.criteria.update((criteria) => ({
-				...criteria,
-				pageNumber: pageAfterDeletion(
-					criteria.pageNumber,
-					this.rowsPerPage,
-					this.totalStudents(),
-				),
-			}));
-			this.refresh();
+			this.focusedIsuId.set(null);
+			// The delete dropped the cached students: the table re-reads itself (invalidated$).
 		} catch (error) {
 			this.alert.error(errorMessage(error, 'Не удалось удалить студента.'));
 		}
 	}
 
-	// ---------- data ----------
-
-	private refresh(): void {
-		this.refresh$.next();
+	/** "Повторить" after a failed load */
+	protected reload(): void {
+		this.fetchCurrentPage().subscribe((page) => this.live.set(loadedOk(page)));
 	}
 
-	private loadPage(): Observable<PagedResponse<Student>> {
-		const criteria = this.criteria();
-		// Circle (asc -> desc -> off[isuId])
-		const hasSort = !!criteria.sortField && !!criteria.sortDirection;
-
-		return this.api
-			.search({
-				search: criteria.searchKeyword,
-				sortBy: hasSort ? criteria.sortField : '',
-				sortDirection: hasSort ? criteria.sortDirection : '',
-				page: criteria.pageNumber - 1,
-				size: this.rowsPerPage,
-			})
-			.pipe(
-				catchError((error: unknown) => {
-					console.error('[Refresh View Error]', error);
-					this.alert.error(errorMessage(error, CONNECTION_ERROR_MESSAGE));
-					return EMPTY; // keep the previous data on screen
-				}),
-			);
-	}
-
-	private syncUrl(): void {
-		void this.router.navigate([], {
-			relativeTo: this.route,
-			queryParams: toQueryParams(this.criteria()),
+	/** Put new criteria into the URL; the route re-runs its resolver and the table updates. */
+	private navigate(changes: Partial<StudentCriteria>): Promise<boolean> {
+		return this.router.navigate([], {
+			queryParams: toQueryParams({ ...this.criteria(), ...changes }),
 			queryParamsHandling: 'merge',
 			replaceUrl: true,
 		});

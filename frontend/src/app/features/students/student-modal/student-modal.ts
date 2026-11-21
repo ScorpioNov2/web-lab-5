@@ -32,6 +32,8 @@ export const toDateInputValue = (date: Date | null | undefined): string =>
 })
 export class StudentModal {
 	readonly state = input.required<StudentModalState>();
+	/** May the user change data? Only an ADMIN gets "Обновить" / "Удалить" in the view popup. */
+	readonly canManage = input(true);
 
 	readonly closed = output<void>();
 	readonly save = output<StudentSaveEvent>();

@@ -1,7 +1,8 @@
 import { Component, effect, inject, signal, untracked } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
+import { safeRedirectTarget } from '../../../core/auth/route-access';
 import { errorMessage } from '../../../core/http/api-error';
 import { AlertService } from '../../../shared/ui/alert/alert.service';
 import { ModalShell } from '../../../shared/ui/modal-shell/modal-shell';
@@ -22,6 +23,7 @@ export class AuthModal {
 	private readonly alert = inject(AlertService);
 	private readonly pigeon = inject(WelcomePigeonService);
 	private readonly fb = inject(NonNullableFormBuilder);
+	private readonly router = inject(Router);
 
 	protected readonly loginForm = this.fb.group({
 		loginIdentifier: '',
@@ -50,11 +52,6 @@ export class AuthModal {
 				this.showPasswordConfirm.set(false);
 			});
 		});
-
-		// The refresh token no longer works: ask the user to log in again.
-		this.auth.sessionExpired$
-			.pipe(takeUntilDestroyed())
-			.subscribe(() => this.modal.open('login'));
 	}
 
 	protected title(mode: 'login' | 'register'): string {
@@ -76,6 +73,9 @@ export class AuthModal {
 				this.modal.close();
 				this.alert.success('Вы успешно вошли в систему!');
 				this.pigeon.fly(response.user?.fullName || response.user?.username);
+				// Back to the page the middleware / guard sent the guest away from (/login?redirect=...)
+				const redirect = this.router.parseUrl(this.router.url).queryParams['redirect'];
+				void this.router.navigateByUrl(safeRedirectTarget(redirect));
 			},
 			error: (error: unknown) =>
 				this.alert.error(

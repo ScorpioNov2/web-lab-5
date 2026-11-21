@@ -1,0 +1,31 @@
+<section class="toolbar-section">
+	<div class="search-box">
+		<input type="text" placeholder="Поиск..." aria-label="Поиск" disabled />
+	</div>
+	<div class="action-buttons">
+		<button type="button" class="btn btn-success" disabled>Добавление</button>
+		<button type="button" class="btn btn-primary" disabled>Редактирование</button>
+		<button type="button" class="btn btn-danger" disabled>Удаление</button>
+	</div>
+</section>
+
+<section class="status-section">
+	<span class="badge-info">Всего: 0 студентов</span>
+</section>
+
+<section class="table-container">
+	<div class="empty-state">
+		<img src="assets/app/empty-box.png" alt="No data" class="empty-img" />
+		<p class="empty-text">Здесь пока ничего нет!</p>
+		<div class="empty-text-wrapper">
+			Вы можете
+			<button
+				type="button"
+				class="btn btn-secondary btn-empty-login"
+				(click)="authModal.open('login'); $event.stopPropagation()"
+			>
+				Войти</button
+			>, чтобы просмотреть данные.
+		</div>
+	</div>
+</section>

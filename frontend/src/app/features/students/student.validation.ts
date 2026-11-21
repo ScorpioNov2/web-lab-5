@@ -12,11 +12,11 @@ export function validateStudentForm(form: StudentPayload): ValidationResult {
 		errors.push('Название группы/класса не должно быть пустым!');
 	}
 
-	if (!form.isuId || isNaN(form.isuId)) {
+	if (!form.isuId || isNaN(form.isuId) || form.isuId <= 0) {
 		errors.push('Номер ISU ID должен быть корректным числом!');
 	}
 
-	if (!form.dormitoryNumber || isNaN(form.dormitoryNumber)) {
+	if (!form.dormitoryNumber || isNaN(form.dormitoryNumber) || form.dormitoryNumber <= 0) {
 		errors.push('Номер корпуса общежития должен быть числом!');
 	}
 
