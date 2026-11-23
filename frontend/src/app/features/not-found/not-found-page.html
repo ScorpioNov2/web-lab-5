@@ -14,15 +14,9 @@
 				(error)="imageFailed.set(true)"
 			/>
 		} @else {
-			<svg
-				class="artwork"
-				viewBox="0 0 240 240"
-				fill="none"
-				aria-hidden="true"
-				xmlns="http://www.w3.org/2000/svg"
-			>
+			<svg class="artwork" viewBox="0 0 240 240" fill="none" aria-hidden="true">
 				<defs>
-					<!-- Градиент планеты с глубокими тенями -->
+					<!-- planet: deep shadows -->
 					<radialGradient id="nf-planet-grad" cx="32%" cy="28%" r="72%">
 						<stop offset="0%" stop-color="#e9d5ff" />
 						<stop offset="25%" stop-color="#9333ea" />
@@ -30,7 +24,7 @@
 						<stop offset="100%" stop-color="#090314" />
 					</radialGradient>
 
-					<!-- Направленный градиент для ободка (светлый сверху слева, прозрачный в тени) -->
+					<!-- directional rim light: bright top left, transparent in the shadow -->
 					<linearGradient id="nf-rim-stroke" x1="12%" y1="12%" x2="72%" y2="72%">
 						<stop offset="0%" stop-color="#ffffff" stop-opacity="0.7" />
 						<stop offset="40%" stop-color="#c084fc" stop-opacity="0.3" />
@@ -38,14 +32,14 @@
 						<stop offset="100%" stop-color="#090314" stop-opacity="0" />
 					</linearGradient>
 
-					<!-- Легкое фоновое свечение за планетой -->
+					<!-- soft glow behind the planet -->
 					<radialGradient id="nf-bg-glow" cx="50%" cy="48%" r="50%">
 						<stop offset="0%" stop-color="#7c3aed" stop-opacity="0.24" />
 						<stop offset="60%" stop-color="#38bdf8" stop-opacity="0.06" />
 						<stop offset="100%" stop-color="#090514" stop-opacity="0" />
 					</radialGradient>
 
-					<!-- Градиент основного кольца -->
+					<!-- main ring -->
 					<linearGradient id="nf-ring-grad" x1="0%" y1="50%" x2="100%" y2="50%">
 						<stop offset="0%" stop-color="#38bdf8" stop-opacity="0.1" />
 						<stop offset="25%" stop-color="#38bdf8" stop-opacity="0.85" />
@@ -54,14 +48,14 @@
 						<stop offset="100%" stop-color="#f472b6" stop-opacity="0.1" />
 					</linearGradient>
 
-					<!-- Градиент луны -->
+					<!-- moon -->
 					<radialGradient id="nf-moon-grad" cx="30%" cy="30%" r="70%">
 						<stop offset="0%" stop-color="#ffffff" />
 						<stop offset="50%" stop-color="#cbd5e1" />
 						<stop offset="100%" stop-color="#334155" />
 					</radialGradient>
 
-					<!-- Мягкие ореолы для спутников (без квадратных артефактов фильтра) -->
+					<!-- soft halos for the satellites (no square filter artefacts) -->
 					<radialGradient id="nf-moon-halo" cx="50%" cy="50%" r="50%">
 						<stop offset="35%" stop-color="#e2e8f0" stop-opacity="0.32" />
 						<stop offset="100%" stop-color="#e2e8f0" stop-opacity="0" />
@@ -75,7 +69,7 @@
 						<stop offset="100%" stop-color="#f472b6" stop-opacity="0" />
 					</radialGradient>
 
-					<!-- Фильтр свечения с расширенной областью (только для широкого кольца) -->
+					<!-- glow filter with an enlarged region (only for the wide ring) -->
 					<filter
 						id="nf-ring-glow"
 						filterUnits="userSpaceOnUse"
@@ -91,16 +85,16 @@
 						</feMerge>
 					</filter>
 
-					<!-- Обтравочный контур планеты -->
+					<!-- clip path of the planet -->
 					<clipPath id="nf-planet-clip">
 						<circle cx="120" cy="115" r="56" />
 					</clipPath>
 				</defs>
 
-				<!-- 1. Чистое фоновое свечение -->
+				<!-- 1. clean background glow -->
 				<circle cx="120" cy="115" r="105" fill="url(#nf-bg-glow)" />
 
-				<!-- 2. Звезды на фоне -->
+				<!-- 2. background stars -->
 				<g opacity="0.85">
 					<circle cx="42" cy="54" r="1.5" fill="#e2e8f0" />
 					<circle cx="198" cy="42" r="1.2" fill="#38bdf8" />
@@ -116,7 +110,7 @@
 					/>
 				</g>
 
-				<!-- 3. ЗАДНЯЯ часть кольца (наклон -16 градусов) -->
+				<!-- 3. BACK half of the ring (tilted -16 degrees) -->
 				<g transform="rotate(-16 120 115)">
 					<path
 						d="M 16 115 A 104 28 0 0 1 224 115"
@@ -134,11 +128,11 @@
 					/>
 				</g>
 
-				<!-- 4. Основная сфера планеты -->
+				<!-- 4. the planet sphere -->
 				<g>
 					<circle cx="120" cy="115" r="56" fill="url(#nf-planet-grad)" />
 
-					<!-- Детали поверхности и тень от кольца -->
+					<!-- surface bands and the shadow of the ring -->
 					<g clip-path="url(#nf-planet-clip)">
 						<g transform="rotate(-16 120 115)" opacity="0.18">
 							<rect x="45" y="82" width="150" height="7" rx="3.5" fill="#f3e8ff" />
@@ -156,7 +150,7 @@
 						</g>
 					</g>
 
-					<!-- Тонкий световой блик только по верхнему левому краю -->
+					<!-- thin rim light along the top left edge only -->
 					<circle
 						cx="120"
 						cy="115"
@@ -166,7 +160,7 @@
 					/>
 				</g>
 
-				<!-- 5. ПЕРЕДНЯЯ часть кольца -->
+				<!-- 5. FRONT half of the ring -->
 				<g transform="rotate(-16 120 115)" filter="url(#nf-ring-glow)">
 					<path
 						d="M 224 115 A 104 28 0 0 1 16 115"
@@ -183,8 +177,8 @@
 					/>
 				</g>
 
-				<!-- 6. Спутники с гладким радиальным свечением -->
-				<!-- Крупная луна -->
+				<!-- 6. satellites with a smooth radial glow -->
+				<!-- large moon -->
 				<g>
 					<circle cx="186" cy="48" r="22" fill="url(#nf-moon-halo)" />
 					<circle cx="186" cy="48" r="9.5" fill="url(#nf-moon-grad)" />
@@ -192,14 +186,14 @@
 					<circle cx="189" cy="51" r="1.5" fill="#64748b" opacity="0.4" />
 				</g>
 
-				<!-- Голубой спутник -->
+				<!-- blue satellite -->
 				<g>
 					<circle cx="52" cy="176" r="14" fill="url(#nf-cyan-halo)" />
 					<circle cx="52" cy="176" r="5" fill="#38bdf8" />
 					<circle cx="50.5" cy="174.5" r="1.5" fill="#ffffff" opacity="0.85" />
 				</g>
 
-				<!-- Малый розовый спутник -->
+				<!-- small pink satellite -->
 				<g>
 					<circle cx="196" cy="154" r="10" fill="url(#nf-pink-halo)" />
 					<circle cx="196" cy="154" r="3.2" fill="#f472b6" />

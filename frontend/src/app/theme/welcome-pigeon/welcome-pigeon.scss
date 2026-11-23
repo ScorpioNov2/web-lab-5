@@ -275,13 +275,14 @@
 	}
 }
 
+/* the glow colour is the theme's --welcome-flyer-glow-rgb (three numbers); orange when it sets none */
 @keyframes flyer-glow {
 	from {
-		filter: drop-shadow(0 0 3px rgba(255, 140, 30, 0.3));
+		filter: drop-shadow(0 0 3px rgb(var(--welcome-flyer-glow-rgb, 255 140 30) / 0.3));
 	}
 
 	to {
-		filter: drop-shadow(0 0 11px rgba(255, 150, 40, 0.85));
+		filter: drop-shadow(0 0 11px rgb(var(--welcome-flyer-glow-rgb, 255 150 40) / 0.85));
 	}
 }
 

@@ -29,9 +29,12 @@ export const THEME_DECORATIONS: Record<string, ThemeDecorations> = {
 			'bottom-4',
 		],
 	},
+	// Christmas: string lights along the top, snow drifts along the bottom, pine garlands down both
+	// sides (painted first, so the lights and the drifts cover their ends) and one tall picture in the
+	// top-right corner.
 	christmas: {
-		corners: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-		lines: ['top', 'bottom', 'left', 'right'],
-		slots: ['left-1', 'right-1'],
+		corners: ['top-left', 'top-right', 'bottom-left'],
+		lines: ['left', 'right', 'top', 'bottom'],
+		slots: [],
 	},
 };
