@@ -64,6 +64,87 @@ describe('FallingEffect', () => {
 		expect(items(root)).toHaveLength(0);
 	});
 
+	describe('theme settings', () => {
+		/** Spawns items for a while and returns what ended up on screen. */
+		function spawned(random: number, spawns = 1) {
+			vi.spyOn(Math, 'random').mockReturnValue(random);
+			const fixture = TestBed.createComponent(FallingEffect);
+			vi.advanceTimersByTime(350 * spawns);
+			fixture.detectChanges();
+			return Array.from(
+				fixture.nativeElement.querySelectorAll('.falling-item') as NodeListOf<HTMLElement>,
+			);
+		}
+
+		it('uses all the sprites of a bigger set (16): the last one stays for the ground', () => {
+			cssVariables['--theme-falling-item-count'] = '16';
+			expect(spawned(0)[0].dataset['index']).toBe('1');
+			TestBed.resetTestingModule();
+			// the highest random value still gives sprite 15, never 16
+			TestBed.configureTestingModule({
+				providers: [
+					{
+						provide: ThemeService,
+						useValue: { cssVariable: (n: string) => cssVariables[n] ?? '' },
+					},
+				],
+			});
+			expect(spawned(0.999)[0].dataset['index']).toBe('15');
+		});
+
+		it('never uses a sprite number the stylesheet has no rule for (max 24)', () => {
+			cssVariables['--theme-falling-item-count'] = '99';
+			expect(spawned(0.999)[0].dataset['index']).toBe('23');
+		});
+
+		it('takes size and fall time from the theme (snow is small and slow)', () => {
+			Object.assign(cssVariables, {
+				'--theme-falling-size-min': '14',
+				'--theme-falling-size-max': '34',
+				'--theme-falling-fall-min': '7',
+				'--theme-falling-fall-max': '14',
+			});
+			const [small] = spawned(0);
+			expect(small.style.width).toBe('14px');
+			expect(small.style.animationDuration.startsWith('7s,')).toBe(true);
+			TestBed.resetTestingModule();
+			TestBed.configureTestingModule({
+				providers: [
+					{
+						provide: ThemeService,
+						useValue: { cssVariable: (n: string) => cssVariables[n] ?? '' },
+					},
+				],
+			});
+			const [big] = spawned(0.999);
+			expect(parseFloat(big.style.width)).toBeCloseTo(34, 0);
+			expect(parseFloat(big.style.animationDuration)).toBeCloseTo(14, 0);
+		});
+
+		it('takes the number of objects on screen from the theme', () => {
+			cssVariables['--theme-falling-max-items'] = '3';
+			expect(spawned(0.5, 40)).toHaveLength(3);
+		});
+
+		it('ignores nonsense values and keeps the defaults', () => {
+			Object.assign(cssVariables, {
+				'--theme-falling-size-min': 'big',
+				'--theme-falling-size-max': '-5',
+				'--theme-falling-max-items': '0',
+			});
+			const [item] = spawned(0.5);
+			expect(item.style.width).toBe('30px'); // default 20..40 at 0.5
+		});
+
+		it('a maximum below the minimum cannot turn the range upside down', () => {
+			Object.assign(cssVariables, {
+				'--theme-falling-size-min': '30',
+				'--theme-falling-size-max': '10',
+			});
+			expect(spawned(0.5)[0].style.width).toBe('30px');
+		});
+	});
+
 	it('spawns nothing when the theme has no falling effect', () => {
 		cssVariables['--has-falling-effect'] = '';
 		const fixture = TestBed.createComponent(FallingEffect);

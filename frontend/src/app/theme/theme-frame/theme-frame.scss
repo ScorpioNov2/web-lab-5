@@ -192,6 +192,7 @@
 	left: var(--corner-top-left-left, 5px);
 	width: var(--corner-top-left-width, 80px);
 	height: var(--corner-top-left-height, auto);
+	aspect-ratio: var(--corner-top-left-aspect, auto);
 	background-image: var(--corner-top-left-img);
 }
 
@@ -200,6 +201,7 @@
 	right: var(--corner-top-right-right, 5px);
 	width: var(--corner-top-right-width, 80px);
 	height: var(--corner-top-right-height, auto);
+	aspect-ratio: var(--corner-top-right-aspect, auto);
 	background-image: var(--corner-top-right-img);
 }
 
@@ -208,6 +210,7 @@
 	left: var(--corner-bottom-left-left, 5px);
 	width: var(--corner-bottom-left-width, 80px);
 	height: var(--corner-bottom-left-height, auto);
+	aspect-ratio: var(--corner-bottom-left-aspect, auto);
 	background-image: var(--corner-bottom-left-img);
 }
 
@@ -216,5 +219,6 @@
 	right: var(--corner-bottom-right-right, 5px);
 	width: var(--corner-bottom-right-width, 80px);
 	height: var(--corner-bottom-right-height, auto);
+	aspect-ratio: var(--corner-bottom-right-aspect, auto);
 	background-image: var(--corner-bottom-right-img);
 }

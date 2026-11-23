@@ -25,33 +25,11 @@
 		swayEffect ease-in-out infinite alternate;
 }
 
-/* leverage data-index attributes for an idiomatic, cross-browser safe approach */
-.falling-item[data-index='1'] {
-	background-image: var(--falling-item-img-1);
-}
-
-.falling-item[data-index='2'] {
-	background-image: var(--falling-item-img-2);
-}
-
-.falling-item[data-index='3'] {
-	background-image: var(--falling-item-img-3);
-}
-
-.falling-item[data-index='4'] {
-	background-image: var(--falling-item-img-4);
-}
-
-.falling-item[data-index='5'] {
-	background-image: var(--falling-item-img-5);
-}
-
-.falling-item[data-index='6'] {
-	background-image: var(--falling-item-img-6);
-}
-
-.falling-item[data-index='7'] {
-	background-image: var(--falling-item-img-7);
+/* sprites 1..24 from the theme: --falling-item-img-N (data-index keeps it cross-browser safe) */
+@for $i from 1 through 24 {
+	.falling-item[data-index='#{$i}'] {
+		background-image: var(--falling-item-img-#{$i});
+	}
 }
 
 /* animation basic styles */
@@ -84,14 +62,14 @@
 	}
 }
 
-/* element landed state: switch to sprite #7 and freeze all drift/sway animations */
+/* element landed state: switch to the ground sprite and freeze all drift/sway animations */
 .falling-item.landed {
 	/* pin hard to the bottom of the viewport */
 	top: 96vh !important;
 	/* kill all active fall, sway, and float animations */
 	animation: none !important;
-	/* force swap to the designated ground sprite */
-	background-image: var(--falling-item-img-7) !important;
+	/* force swap to the designated ground sprite: the theme's --falling-item-landed-img, else sprite 7 */
+	background-image: var(--falling-item-landed-img, var(--falling-item-img-7)) !important;
 	/* apply an explicit rotation offset for organic chaos */
 	transform: rotate(15deg);
 	/* establish a smooth fade transition configuration prior to destruction */

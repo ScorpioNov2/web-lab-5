@@ -1,5 +1,127 @@
-/* Christmas theme */
-/* Когда HTML-тег имеет атрибут data-theme="christmas", активировать эту галерею изображений */
-/* html[data-theme="christmas"] {
-    ...
-} */
+@use 'christmas-borders' as art;
+
+/* Christmas theme (event). Active while <html data-theme="christmas"> (see index.html).
+   Registered in app/theme/theme-decorations.ts; pictures live in public/assets/themes/christmas/.
+
+   The page is framed on all four edges:
+     top      lights/string-lights-1.png  one string of lights, repeated along the edge
+     bottom   snow drifts                 drawn in SVG (_christmas-borders.scss), repeated
+     left     pine garland                drawn in SVG, repeated down the edge
+     right    pine garland                the same
+     corner   corners/top-right-corner.png  1364 x 4354, hangs from the top-right corner
+   plus falling snow (snows/*) and Santa's sleigh (welcome/santa-welcome.png) after a login.
+
+   Every size and position is a variable. The one you will most likely change is --xmas-lights-h. */
+html[data-theme='christmas'] {
+	/* ---- sizes of the frame (change these first) ---- */
+	--xmas-lights-h: 84px; /* height of the string of lights; its width follows the 16:9 picture */
+	--xmas-garland-w: 34px; /* width of the garlands on the left and right */
+	--xmas-drift-h: 46px; /* height of the snow drifts at the bottom */
+	/* To use the other string of lights, point --border-top-img at string-lights-2.png. */
+
+	/* the page: no border, room inside the frame so the content does not run under it */
+	--theme-wrapper-border-width: 0px;
+	--theme-frame-wrapper-padding: calc(var(--xmas-lights-h) - 26px) 20px 36px;
+	--theme-padding-top: calc(var(--xmas-lights-h) - 26px);
+	--theme-frame-wrapper-padding-color: #f6f8fa;
+
+	/* 1. TOP: one string of lights, shrunk to --xmas-lights-h high and repeated along the edge */
+	--border-top-img: url('/assets/themes/christmas/lights/string-lights-1.png');
+	--border-top-height: var(--xmas-lights-h);
+	--border-top-position: left top;
+
+	/* 2. BOTTOM: snow drifts */
+	--border-bottom-img: #{art.$drift};
+	--border-bottom-height: var(--xmas-drift-h);
+
+	/* 3. LEFT and RIGHT: pine garlands */
+	--border-left-img: #{art.$garland};
+	--border-left-width: var(--xmas-garland-w);
+	--border-right-img: #{art.$garland};
+	--border-right-width: var(--xmas-garland-w);
+
+	/* 4. CORNER: 1364 x 4354 (1 : 3.19). Sized by its width alone, the height follows the proportion. */
+	// --corner-top-right-img: url('/assets/themes/christmas/corners/top-right-corner.png');
+	// --corner-top-right-width: clamp(60px, 10vw, 100px);
+	// --corner-top-right-height: auto;
+	// --corner-top-right-aspect: 1364 / 4354;
+	// --corner-top-right-top: 0px;
+	// --corner-top-right-right: 0px;
+
+	--corner-top-right-img: url('/assets/themes/christmas/corners/top-right-corner-2.png');
+	--corner-top-right-width: clamp(150px, 20vw, 300px);
+	--corner-top-right-height: auto;
+	--corner-top-right-aspect: 600 / 379;
+	--corner-top-right-top: 0px;
+	--corner-top-right-right: 0px;
+
+	--corner-top-left-img: url('/assets/themes/christmas/corners/top-left-corner.png');
+	--corner-top-left-width: clamp(80px, 6vw, 140px);
+	--corner-top-left-height: auto;
+	--corner-top-left-aspect: 600 / 498;
+	--corner-top-left-top: 30px;
+	--corner-top-left-left: 0px;
+
+	--corner-bottom-left-img: url('/assets/themes/christmas/corners/bottom-left-corner.png');
+	--corner-bottom-left-width: clamp(100px, 12vw, 160px);
+	--corner-bottom-left-height: auto;
+	--corner-bottom-left-aspect: 600 / 600;
+	--corner-bottom-left-bottom: -20px;
+	--corner-bottom-left-left: -16px;
+
+	/* 5. FALLING SNOW (app/theme/falling-effect). Sprites 1-15 fall, the last one lies on the ground. */
+	--has-falling-effect: true;
+	--theme-falling-item-count: 16;
+	--theme-falling-max-items: 45;
+	--theme-falling-size-min: 14; /* px */
+	--theme-falling-size-max: 34;
+	--theme-falling-fall-min: 7; /* seconds: snow drifts slower than leaves */
+	--theme-falling-fall-max: 14;
+
+	--falling-item-img-1: url('/assets/themes/christmas/snows/snow-1.webp');
+	--falling-item-img-2: url('/assets/themes/christmas/snows/snow-2.webp');
+	--falling-item-img-3: url('/assets/themes/christmas/snows/snow-3.webp');
+	--falling-item-img-4: url('/assets/themes/christmas/snows/snow-4.webp');
+	--falling-item-img-5: url('/assets/themes/christmas/snows/snow-5.webp');
+	--falling-item-img-6: url('/assets/themes/christmas/snows/snow-6.webp');
+	--falling-item-img-7: url('/assets/themes/christmas/snows/snow-7.webp');
+	--falling-item-img-8: url('/assets/themes/christmas/snows/snow-8.webp');
+	--falling-item-img-9: url('/assets/themes/christmas/snows/snow-9.webp');
+	--falling-item-img-10: url('/assets/themes/christmas/snows/snow-10.webp');
+	--falling-item-img-11: url('/assets/themes/christmas/snows/snow-11.webp');
+	--falling-item-img-12: url('/assets/themes/christmas/snows/snow-12.webp');
+	--falling-item-img-13: url('/assets/themes/christmas/snows/snow-13.webp');
+	--falling-item-img-14: url('/assets/themes/christmas/snows/snow-14.webp');
+	--falling-item-img-15: url('/assets/themes/christmas/snows/snow-15.webp');
+	--falling-item-img-16: url('/assets/themes/christmas/snows/snow-16.png');
+	/* what a flake turns into when it reaches the bottom (the last sprite) */
+	--falling-item-landed-img: var(--falling-item-img-16);
+
+	/* 6. WELCOME FLYER (app/theme/welcome-pigeon): Santa's sleigh tows the sign after a login.
+	   santa-welcome.png is 4862 x 2348 (2.07 : 1) with no empty margin, so 300 x 145 keeps its proportions. */
+	--welcome-flyer-image: url('/assets/themes/christmas/welcome/santa-welcome.png');
+	--welcome-flyer-width: 300px;
+	--welcome-flyer-height: 145px;
+	/* the rope is tied to the hook ring under the lantern at the back of the sleigh */
+	--welcome-flyer-anchor-x: 0.059;
+	--welcome-flyer-anchor-y: 0.705;
+	/* a little room so the antlers are not cut off when the sleigh bobs up */
+	--welcome-flyer-top: 14px;
+	/* warm gold glow around the sleigh (three numbers: r g b) */
+	--welcome-flyer-glow-rgb: 255 226 150;
+}
+
+/* a narrow window: everything a little smaller */
+@media (max-width: 600px) {
+	html[data-theme='christmas'] {
+		--xmas-lights-h: 60px;
+		--xmas-garland-w: 18px;
+		--xmas-drift-h: 32px;
+		--theme-frame-wrapper-padding: calc(var(--xmas-lights-h) - 20px) 8px 22px;
+		--theme-padding-top: calc(var(--xmas-lights-h) - 20px);
+		--corner-top-right-width: 84px;
+		--welcome-flyer-width: 210px;
+		--welcome-flyer-height: 101px;
+		--theme-falling-max-items: 28;
+	}
+}

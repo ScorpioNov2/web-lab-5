@@ -6,4 +6,4 @@
 
 /* Event themes: each one sets CSS variables under html[data-theme='<name>'] */
 @use 'styles/themes/halloween';
-// @use 'styles/themes/christmas';
+@use 'styles/themes/christmas';

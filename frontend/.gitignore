@@ -26,3 +26,4 @@ Thumbs.db
 
 # Local environment (see .env.example)
 .env
+/public/assets/themes/*original*

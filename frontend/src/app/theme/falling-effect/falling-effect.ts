@@ -18,14 +18,32 @@ interface FallingItem {
 	fading: boolean;
 }
 
-const MAX_ITEMS = 25;
+/** The stylesheet has a rule for sprites 1..24 (`--falling-item-img-N`). */
+const MAX_SPRITES = 24;
 const SPAWN_INTERVAL_MS = 350;
 const LANDED_VISIBLE_MS = 4000;
 const FADE_OUT_MS = 1000;
 
+/** Every knob of the effect a theme may set, with the values the leaves of the first theme use. */
+const DEFAULTS = {
+	count: 7,
+	maxItems: 25,
+	sizeMin: 20,
+	sizeMax: 40,
+	fallMin: 4,
+	fallMax: 9,
+} as const;
+
 /**
  * Objects (leaves, snowflakes...) falling over the page. Active only when the theme sets
  * `--has-falling-effect: true`; the sprites come from `--falling-item-img-N` (was startFallingEffect).
+ *
+ * Optional theme variables (all have defaults):
+ *   --theme-falling-item-count   number of sprites; the LAST one is the "lying on the ground" sprite
+ *                                (or set --falling-item-landed-img), the others fall (max 24)
+ *   --theme-falling-max-items    how many objects may be on screen at once (default 25)
+ *   --theme-falling-size-min/-max   size in px (default 20 / 40)
+ *   --theme-falling-fall-min/-max   free-fall time in seconds (default 4 / 9)
  */
 @Component({
 	selector: 'app-falling-effect',
@@ -50,13 +68,28 @@ export class FallingEffect {
 
 	private spawnItem(): void {
 		if (this.theme.cssVariable('--has-falling-effect') !== 'true') return;
-		if (this.items().length >= MAX_ITEMS) return;
 
 		// The last sprite is the "ground" one, so the falling ones are randomised from 1 to n-1.
-		const spriteCount = parseInt(this.theme.cssVariable('--theme-falling-item-count')) || 7;
+		const spriteCount = Math.min(
+			this.number('--theme-falling-item-count', DEFAULTS.count),
+			MAX_SPRITES,
+		);
 		const fallingTypes = spriteCount > 1 ? spriteCount - 1 : 1;
+		const maxItems = this.number('--theme-falling-max-items', DEFAULTS.maxItems);
+		if (this.items().length >= maxItems) return;
 
-		const duration = Math.random() * 5 + 4; // free-fall time (s)
+		const sizeMin = this.number('--theme-falling-size-min', DEFAULTS.sizeMin);
+		const sizeMax = Math.max(
+			sizeMin,
+			this.number('--theme-falling-size-max', DEFAULTS.sizeMax),
+		);
+		const fallMin = this.number('--theme-falling-fall-min', DEFAULTS.fallMin);
+		const fallMax = Math.max(
+			fallMin,
+			this.number('--theme-falling-fall-max', DEFAULTS.fallMax),
+		);
+
+		const duration = Math.random() * (fallMax - fallMin) + fallMin; // free-fall time (s)
 		const delay = Math.random() * 4;
 		const id = ++this.nextId;
 
@@ -66,7 +99,7 @@ export class FallingEffect {
 				id,
 				index: Math.floor(Math.random() * fallingTypes) + 1,
 				left: Math.random() * 100,
-				size: Math.random() * 20 + 20,
+				size: Math.random() * (sizeMax - sizeMin) + sizeMin,
 				animationDuration: `${duration}s, ${Math.random() * 3 + 2}s`,
 				animationDelay: `${delay}s, 0s`,
 				landed: false,
@@ -87,6 +120,12 @@ export class FallingEffect {
 				);
 			});
 		});
+	}
+
+	/** A positive number from a theme variable, or the default when it is missing or not a number. */
+	private number(name: string, fallback: number): number {
+		const value = parseFloat(this.theme.cssVariable(name));
+		return Number.isFinite(value) && value > 0 ? value : fallback;
 	}
 
 	private patch(id: number, changes: Partial<FallingItem>): void {
