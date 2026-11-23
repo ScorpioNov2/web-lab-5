@@ -1,4 +1,4 @@
-name: Deploy Angular to GitHub Pages
+name: Deploy Vite to GitHub Pages
 
 on:
   push:
@@ -37,12 +37,12 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build Angular
+      - name: Build project
         working-directory: frontend
-        run: npm run build -- --configuration production --base-href /lab-web-4/
+        run: npm run build -- --base /web-lab-5/
 
       - name: SPA fallback
-        run: cp frontend/dist/frontend/browser/index.html frontend/dist/frontend/browser/404.html
+        run: cp frontend/dist/index.html frontend/dist/404.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -50,7 +50,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: frontend/dist/frontend/browser
+          path: frontend/dist
 
       - name: Deploy
         id: deployment
