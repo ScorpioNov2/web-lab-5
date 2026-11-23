@@ -1,10 +1,8 @@
 <section class="error-state" role="alert">
-	<h2 class="error-title">
-		{{ view().title }}
-		@if (status() > 0) {
-			<span class="error-code">({{ status() }})</span>
-		}
-	</h2>
+	@if (status() > 0) {
+		<div class="error-code">{{ status() }}</div>
+	}
+	<h2 class="error-title">{{ view().title }}</h2>
 	<p class="error-hint">{{ message() || view().hint }}</p>
 	<div class="error-actions">
 		@if (retryable() && view().canRetry) {
