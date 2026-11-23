@@ -17,7 +17,7 @@ export default defineConfig(() => ({
 	plugins: [
 		analog({
 			// Server-side rendering is on; `npm run build` produces dist/analog (Nitro server + client).
-			ssr: true,
+			ssr: false,
 			// By default Analog prerenders "/" into a static index.html, and Nitro serves static files
 			// BEFORE the middleware: the auth rules would be skipped for that URL. Every page here
 			// depends on who is signed in, so nothing is prerendered ([] switches the default off).

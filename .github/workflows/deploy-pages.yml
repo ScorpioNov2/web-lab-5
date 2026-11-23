@@ -42,7 +42,7 @@ jobs:
         run: npm run build -- --base /web-lab-5/
 
       - name: SPA fallback
-        run: cp frontend/dist/index.html frontend/dist/404.html
+        run: cp frontend/dist/client/index.html frontend/dist/client/404.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -50,7 +50,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: frontend/dist
+          path: frontend/dist/client
 
       - name: Deploy
         id: deployment
