@@ -4,7 +4,8 @@ import analog from '@analogjs/platform';
 import { defineConfig } from 'vite';
 
 // https://analogjs.org/docs/packages/platform/overview
-export default defineConfig(() => ({
+export default defineConfig(({ mode }) => ({
+	base: mode === 'production' ? '/web-lab-5/' : '/',
 	build: {
 		target: ['es2020'],
 	},

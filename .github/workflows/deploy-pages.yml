@@ -39,7 +39,7 @@ jobs:
 
       - name: Build project
         working-directory: frontend
-        run: npm run build -- --base /web-lab-5/
+        run: npm run build
 
       - name: SPA fallback
         run: cp frontend/dist/client/index.html frontend/dist/client/404.html
